@@ -51,16 +51,21 @@
         </div>`;
     }
 
-    function makeNetBar(server) {
+    function makeNetBars(server) {
         const maxNet = server.net_max || 1000;
         const pctIn = pct((server.net_in / maxNet) * 100);
         const pctOut = pct((server.net_out / maxNet) * 100);
-        const tip = `In: ${server.net_in} Mbps / Out: ${server.net_out} Mbps`;
         return `<div class="bar-group">
-            <div class="bar-tooltip">${escHtml(tip)}</div>
-            <div class="bar-label">NET</div>
-            <div class="bar-outer net-bar">
+            <div class="bar-tooltip">${server.net_in} Mbps</div>
+            <div class="bar-label">IN</div>
+            <div class="bar-outer">
                 <div class="bar-fill net-in" style="height:${pctIn}%"></div>
+            </div>
+        </div>
+        <div class="bar-group">
+            <div class="bar-tooltip">${server.net_out} Mbps</div>
+            <div class="bar-label">OUT</div>
+            <div class="bar-outer">
                 <div class="bar-fill net-out" style="height:${pctOut}%"></div>
             </div>
         </div>`;
@@ -80,7 +85,7 @@
                 const bars = makeBarGroup('CPU', srv.cpu, 'cpu', `CPU: ${srv.cpu}%`)
                     + makeBarGroup('RAM', srv.ram, 'ram', `RAM: ${srv.ram}%`)
                     + makeBarGroup('DISK', srv.disk, 'disk', `Disk: ${srv.disk}%`)
-                    + makeNetBar(srv);
+                    + makeNetBars(srv);
 
                 let dots = '';
                 for (const d of srv.uptime) {
@@ -93,9 +98,9 @@
                             <div class="server-status-dot" style="background:${dotColor};box-shadow:0 0 8px ${dotColor}40"></div>
                             <div class="server-name">${escHtml(srv.name)}</div>
                         </div>
+                        <div class="uptime-row">${dots}</div>
                     </div>
                     <div class="bars-row">${bars}</div>
-                    <div class="uptime-row">${dots}</div>
                 </div>`;
             }
             html += '</div>';

@@ -75,7 +75,12 @@ class Server(db.Model):
     api_key = db.Column(db.String(64), unique=True, nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
     cpu_percent = db.Column(db.Float, default=0)
+    cpu_iowait = db.Column(db.Float, default=0)
+    cpu_steal = db.Column(db.Float, default=0)
     ram_percent = db.Column(db.Float, default=0)
+    swap_percent = db.Column(db.Float, default=0)
+    ram_buffered = db.Column(db.Float, default=0)
+    ram_cached = db.Column(db.Float, default=0)
     disk_percent = db.Column(db.Float, default=0)
     net_in_mbps = db.Column(db.Float, default=0)
     net_out_mbps = db.Column(db.Float, default=0)
@@ -98,7 +103,12 @@ class StatSnapshot(db.Model):
     server_id = db.Column(db.Integer, db.ForeignKey('server.id'), nullable=False)
     ts = db.Column(db.DateTime, nullable=False, default=utcnow)
     cpu = db.Column(db.Float, default=0)
+    iowait = db.Column(db.Float, default=0)
+    steal = db.Column(db.Float, default=0)
     ram = db.Column(db.Float, default=0)
+    swap = db.Column(db.Float, default=0)
+    buffered = db.Column(db.Float, default=0)
+    cached = db.Column(db.Float, default=0)
     disk = db.Column(db.Float, default=0)
     net_in = db.Column(db.Float, default=0)
     net_out = db.Column(db.Float, default=0)
@@ -255,7 +265,9 @@ def api_server_detail(srv_id):
 
     history = [{
         'ts': s.ts.isoformat(),
-        'cpu': round(s.cpu, 1), 'ram': round(s.ram, 1),
+        'cpu': round(s.cpu, 1), 'iowait': round(s.iowait, 1), 'steal': round(s.steal, 1),
+        'ram': round(s.ram, 1), 'swap': round(s.swap, 1),
+        'buffered': round(s.buffered, 1), 'cached': round(s.cached, 1),
         'disk': round(s.disk, 1),
         'net_in': round(s.net_in, 2), 'net_out': round(s.net_out, 2),
     } for s in snaps]
@@ -271,7 +283,12 @@ def api_server_detail(srv_id):
         'id': srv.id,
         'name': srv.name,
         'cpu': round(srv.cpu_percent, 1),
+        'iowait': round(srv.cpu_iowait, 1),
+        'steal': round(srv.cpu_steal, 1),
         'ram': round(srv.ram_percent, 1),
+        'swap': round(srv.swap_percent, 1),
+        'buffered': round(srv.ram_buffered, 1),
+        'cached': round(srv.ram_cached, 1),
         'disk': round(srv.disk_percent, 1),
         'net_in': round(srv.net_in_mbps, 2),
         'net_out': round(srv.net_out_mbps, 2),
@@ -298,7 +315,12 @@ def agent_report():
 
     data = request.json
     server.cpu_percent = min(100, max(0, float(data.get('cpu', 0))))
+    server.cpu_iowait = min(100, max(0, float(data.get('iowait', 0))))
+    server.cpu_steal = min(100, max(0, float(data.get('steal', 0))))
     server.ram_percent = min(100, max(0, float(data.get('ram', 0))))
+    server.swap_percent = min(100, max(0, float(data.get('swap', 0))))
+    server.ram_buffered = min(100, max(0, float(data.get('buffered', 0))))
+    server.ram_cached = min(100, max(0, float(data.get('cached', 0))))
     server.disk_percent = min(100, max(0, float(data.get('disk', 0))))
     server.net_in_mbps = max(0, float(data.get('net_in', 0)))
     server.net_out_mbps = max(0, float(data.get('net_out', 0)))
@@ -310,7 +332,10 @@ def agent_report():
     if not last_snap or (now - last_snap.ts).total_seconds() >= 55:
         snap = StatSnapshot(
             server_id=server.id, ts=now,
-            cpu=server.cpu_percent, ram=server.ram_percent, disk=server.disk_percent,
+            cpu=server.cpu_percent, iowait=server.cpu_iowait, steal=server.cpu_steal,
+            ram=server.ram_percent, swap=server.swap_percent,
+            buffered=server.ram_buffered, cached=server.ram_cached,
+            disk=server.disk_percent,
             net_in=server.net_in_mbps, net_out=server.net_out_mbps,
         )
         db.session.add(snap)
@@ -509,8 +534,17 @@ get_net() {{
 }}
 
 while true; do
-    CPU=$(top -bn1 | grep "Cpu(s)" | awk '{{print $2 + $4}}')
+    # CPU breakdown
+    read CPU IOWAIT STEAL <<< $(top -bn1 | grep "Cpu(s)" | awk '{{printf "%.1f %.1f %.1f", $2+$4, $10, $16}}')
+    [[ -z "$IOWAIT" ]] && IOWAIT=0
+    [[ -z "$STEAL" ]] && STEAL=0
+
+    # RAM breakdown
     RAM=$(free | awk '/Mem:/ {{printf "%.1f", $3/$2 * 100}}')
+    SWAP=$(free | awk '/Swap:/ {{if($2>0) printf "%.1f", $3/$2*100; else print "0"}}')
+    BUFFERED=$(awk '/Buffers:/ {{printf "%.1f", $2*100/'$(free | awk '/Mem:/ {{print $2}}')"}}" /proc/meminfo)
+    CACHED=$(awk '/^Cached:/ {{printf "%.1f", $2*100/'$(free | awk '/Mem:/ {{print $2}}')"}}" /proc/meminfo)
+
     DISK=$(df / | awk 'NR==2 {{print $5}}' | tr -d '%')
     NET=($(get_net))
     NET_IN=${{NET[0]}}
@@ -519,7 +553,7 @@ while true; do
     curl -s -X POST "$URL" \\
         -H "Content-Type: application/json" \\
         -H "X-API-Key: $API_KEY" \\
-        -d "{{\\\"cpu\\\": $CPU, \\\"ram\\\": $RAM, \\\"disk\\\": $DISK, \\\"net_in\\\": $NET_IN, \\\"net_out\\\": $NET_OUT}}"
+        -d "{{\\\"cpu\\\": $CPU, \\\"iowait\\\": $IOWAIT, \\\"steal\\\": $STEAL, \\\"ram\\\": $RAM, \\\"swap\\\": $SWAP, \\\"buffered\\\": $BUFFERED, \\\"cached\\\": $CACHED, \\\"disk\\\": $DISK, \\\"net_in\\\": $NET_IN, \\\"net_out\\\": $NET_OUT}}"
 
     sleep $INTERVAL
 done

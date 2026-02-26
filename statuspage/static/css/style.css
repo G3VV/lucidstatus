@@ -127,11 +127,13 @@ main {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 14px;
+    gap: 12px;
 }
 .server-name-area {
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-shrink: 0;
 }
 .server-status-dot {
     width: 10px;
@@ -220,22 +222,19 @@ main {
     opacity: 1;
 }
 
-/* ── Network special (stacked) ────────────────────────────────────────────── */
-.bar-outer.net-bar {
-    position: relative;
-}
-.bar-outer.net-bar .bar-fill.net-in {
-    z-index: 1;
-}
-.bar-outer.net-bar .bar-fill.net-out {
-    z-index: 2;
+/* ── Network bars (separate) ──────────────────────────────────────────────── */
+.bar-fill.net-out {
+    background: var(--bar-net-out);
 }
 
 /* ── Uptime Dots ──────────────────────────────────────────────────────────── */
 .uptime-row {
     display: flex;
     align-items: center;
-    gap: 3px;
+    gap: 2px;
+    flex: 1;
+    justify-content: flex-end;
+    min-width: 0;
 }
 .uptime-dot {
     width: 10px;
