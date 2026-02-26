@@ -591,7 +591,39 @@ echo "  Remove:  systemctl disable --now $SERVICE_NAME && rm $AGENT_PATH /etc/sy
 
 # ── Init ─────────────────────────────────────────────────────────────────────
 
+def _migrate_add_columns():
+    """Add any missing columns to existing SQLite tables on startup."""
+    import sqlite3
+    db_path = os.path.join(app.instance_path, 'statuspage.db')
+    if not os.path.exists(db_path):
+        return
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+
+    migrations = [
+        # (table, column, type, default)
+        ('server', 'cpu_iowait', 'FLOAT', 0),
+        ('server', 'cpu_steal', 'FLOAT', 0),
+        ('server', 'swap_percent', 'FLOAT', 0),
+        ('server', 'ram_buffered', 'FLOAT', 0),
+        ('server', 'ram_cached', 'FLOAT', 0),
+        ('stat_snapshot', 'iowait', 'FLOAT', 0),
+        ('stat_snapshot', 'steal', 'FLOAT', 0),
+        ('stat_snapshot', 'swap', 'FLOAT', 0),
+        ('stat_snapshot', 'buffered', 'FLOAT', 0),
+        ('stat_snapshot', 'cached', 'FLOAT', 0),
+    ]
+    for table, col, dtype, default in migrations:
+        try:
+            cur.execute(f"ALTER TABLE {table} ADD COLUMN {col} {dtype} DEFAULT {default}")
+        except sqlite3.OperationalError:
+            pass  # column already exists
+
+    conn.commit()
+    conn.close()
+
 with app.app_context():
+    _migrate_add_columns()
     db.create_all()
     get_settings()
     get_theme()
