@@ -10,6 +10,9 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
@@ -109,10 +112,10 @@ STATUS_LABELS = {
     'major_outage': 'Major system outage',
 }
 STATUS_COLORS = {
-    'operational': '#22c55e',
-    'degraded': '#eab308',
-    'partial_outage': '#f97316',
-    'major_outage': '#ef4444',
+    'operational': '#83FF78',
+    'degraded': '#FFD95D',
+    'partial_outage': '#FFB778',
+    'major_outage': '#FF5D5D',
 }
 
 def get_uptime_dots(server, num_days=30):
@@ -425,4 +428,6 @@ with app.app_context():
     get_settings()  # ensure defaults exist
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('DEBUG', 'true').lower() in ('true', '1', 'yes')
+    app.run(host='0.0.0.0', port=port, debug=debug)

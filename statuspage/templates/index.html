@@ -9,39 +9,39 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    <div class="container" id="app">
-        <!-- Header -->
-        <div class="header">
-            <div class="logo-wrap">
+    <div class="content-panel">
+        <div class="header-glow"></div>
+        <div class="inner">
+
+            <!-- Header -->
+            <div class="header">
                 <img id="logo-img" class="logo-img" src="" alt="" style="display:none">
-                <span class="site-name" id="site-name">Loading...</span>
+                <span class="site-name" id="site-name" style="display:none"></span>
+                <a href="/admin" class="settings-btn" title="Admin Settings">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65
+                        1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0
+                        9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0
+                        4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65
+                        0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65
+                        0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0
+                        1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0
+                        1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                </a>
             </div>
-            <a href="/admin" class="settings-btn" title="Admin Settings">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                     stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="3"/>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65
-                    1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0
-                    9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0
-                    4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65
-                    0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65
-                    0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0
-                    1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0
-                    1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                </svg>
-            </a>
+
+            <!-- Status Banner -->
+            <div class="status-banner" id="status-banner">
+                <div class="status-dot" id="status-dot"></div>
+                <span class="status-label" id="status-label">Checking status...</span>
+            </div>
+
+            <!-- Categories & Servers -->
+            <div id="categories-container"></div>
         </div>
-
-        <!-- Status Banner -->
-        <div class="status-banner" id="status-banner">
-            <div class="status-dot" id="status-dot"></div>
-            <span class="status-label" id="status-label">Checking status...</span>
-        </div>
-
-        <!-- Categories & Servers -->
-        <div id="categories-container"></div>
-
-        <div class="footer">Powered by StatusPage</div>
     </div>
 
     <script src="/static/js/app.js"></script>
