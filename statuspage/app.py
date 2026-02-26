@@ -2,10 +2,10 @@ import os
 import secrets
 import uuid
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session, send_from_directory
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, send_from_directory, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -19,12 +19,14 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///statuspage.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(app.static_folder, 'uploads')
-app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
 
 CORS(app)
 db = SQLAlchemy(app)
-
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+def utcnow():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 # ── Models ───────────────────────────────────────────────────────────────────
 
@@ -33,6 +35,33 @@ class Settings(db.Model):
     site_name = db.Column(db.String(100), default='lucid.cool')
     logo_path = db.Column(db.String(255), default='')
     admin_password_hash = db.Column(db.String(255))
+
+class ThemeSettings(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    bg_outer = db.Column(db.String(9), default='#1C2327')
+    bg_panel = db.Column(db.String(9), default='#1E252A')
+    bg_card = db.Column(db.String(9), default='#28333A')
+    bg_bar = db.Column(db.String(9), default='#32434D')
+    text_primary = db.Column(db.String(9), default='#F2FAFF')
+    text_secondary = db.Column(db.String(9), default='#8B949E')
+    accent = db.Column(db.String(9), default='#307EB4')
+    border_online = db.Column(db.String(9), default='#83FF78')
+    border_offline = db.Column(db.String(9), default='#FF5D5D')
+    border_partial = db.Column(db.String(9), default='#FFD95D')
+    bar_cpu = db.Column(db.String(9), default='#78A3FF')
+    bar_ram = db.Column(db.String(9), default='#78FFB5')
+    bar_disk = db.Column(db.String(9), default='#E6FF78')
+    bar_net_in = db.Column(db.String(9), default='#C7FF78')
+    bar_net_out = db.Column(db.String(20), default='rgba(255,183,120,0.75)')
+    dot_up = db.Column(db.String(9), default='#83FF78')
+    dot_down = db.Column(db.String(9), default='#FF5D5D')
+    dot_partial = db.Column(db.String(9), default='#FFD95D')
+    dot_grey = db.Column(db.String(9), default='#32434D')
+    glow_from = db.Column(db.String(30), default='rgba(37,111,162,0.1)')
+    status_operational = db.Column(db.String(9), default='#83FF78')
+    status_degraded = db.Column(db.String(9), default='#FFD95D')
+    status_partial = db.Column(db.String(9), default='#FFB778')
+    status_major = db.Column(db.String(9), default='#FF5D5D')
 
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -52,29 +81,48 @@ class Server(db.Model):
     net_out_mbps = db.Column(db.Float, default=0)
     net_max_mbps = db.Column(db.Float, default=1000)
     last_seen = db.Column(db.DateTime, default=None)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=utcnow)
     uptime_records = db.relationship('UptimeRecord', backref='server', lazy=True, cascade='all, delete-orphan')
+    stat_snapshots = db.relationship('StatSnapshot', backref='server', lazy=True, cascade='all, delete-orphan')
 
 class UptimeRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     server_id = db.Column(db.Integer, db.ForeignKey('server.id'), nullable=False)
     date = db.Column(db.Date, nullable=False)
-    status = db.Column(db.String(20), default='up')  # up, down, partial
+    status = db.Column(db.String(20), default='up')
     __table_args__ = (db.UniqueConstraint('server_id', 'date'),)
+
+class StatSnapshot(db.Model):
+    """Stores periodic snapshots for graphs."""
+    id = db.Column(db.Integer, primary_key=True)
+    server_id = db.Column(db.Integer, db.ForeignKey('server.id'), nullable=False)
+    ts = db.Column(db.DateTime, nullable=False, default=utcnow)
+    cpu = db.Column(db.Float, default=0)
+    ram = db.Column(db.Float, default=0)
+    disk = db.Column(db.Float, default=0)
+    net_in = db.Column(db.Float, default=0)
+    net_out = db.Column(db.Float, default=0)
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def get_settings():
     s = Settings.query.first()
     if not s:
-        s = Settings(
-            site_name='lucid.cool',
-            logo_path='',
-            admin_password_hash=generate_password_hash('admin')
-        )
+        s = Settings(site_name='lucid.cool', logo_path='', admin_password_hash=generate_password_hash('admin'))
         db.session.add(s)
         db.session.commit()
     return s
+
+def get_theme():
+    t = ThemeSettings.query.first()
+    if not t:
+        t = ThemeSettings()
+        db.session.add(t)
+        db.session.commit()
+    return t
+
+def theme_to_dict(t):
+    return {c.name: getattr(t, c.name) for c in ThemeSettings.__table__.columns if c.name != 'id'}
 
 def login_required(f):
     @wraps(f)
@@ -85,11 +133,10 @@ def login_required(f):
     return decorated
 
 def compute_overall_status():
-    """Determine overall status from all servers."""
     servers = Server.query.all()
     if not servers:
         return 'operational'
-    now = datetime.utcnow()
+    now = utcnow()
     down_count = 0
     partial_count = 0
     for s in servers:
@@ -105,22 +152,20 @@ def compute_overall_status():
         return 'degraded'
     return 'operational'
 
+def get_status_color(key, theme):
+    m = {'operational': theme.status_operational, 'degraded': theme.status_degraded,
+         'partial_outage': theme.status_partial, 'major_outage': theme.status_major}
+    return m.get(key, '#83FF78')
+
 STATUS_LABELS = {
     'operational': 'All services operational',
     'degraded': 'Some services experiencing delays',
     'partial_outage': 'Partial system outage',
     'major_outage': 'Major system outage',
 }
-STATUS_COLORS = {
-    'operational': '#83FF78',
-    'degraded': '#FFD95D',
-    'partial_outage': '#FFB778',
-    'major_outage': '#FF5D5D',
-}
 
 def get_uptime_dots(server, num_days=30):
-    """Return last `num_days` days of uptime status for a server."""
-    today = datetime.utcnow().date()
+    today = utcnow().date()
     records = {r.date: r.status for r in UptimeRecord.query.filter_by(server_id=server.id).all()}
     dots = []
     for i in range(num_days - 1, -1, -1):
@@ -134,17 +179,17 @@ def get_uptime_dots(server, num_days=30):
     return dots
 
 def server_to_dict(server):
-    now = datetime.utcnow()
+    now = utcnow()
     online = server.last_seen is not None and (now - server.last_seen).total_seconds() < 120
     return {
         'id': server.id,
         'name': server.name,
         'category_id': server.category_id,
-        'cpu': server.cpu_percent,
-        'ram': server.ram_percent,
-        'disk': server.disk_percent,
-        'net_in': server.net_in_mbps,
-        'net_out': server.net_out_mbps,
+        'cpu': round(server.cpu_percent, 1),
+        'ram': round(server.ram_percent, 1),
+        'disk': round(server.disk_percent, 1),
+        'net_in': round(server.net_in_mbps, 2),
+        'net_out': round(server.net_out_mbps, 2),
         'net_max': server.net_max_mbps,
         'online': online,
         'last_seen': server.last_seen.isoformat() if server.last_seen else None,
@@ -157,19 +202,23 @@ def server_to_dict(server):
 def index():
     return render_template('index.html')
 
+@app.route('/server/<int:srv_id>')
+def server_detail_page(srv_id):
+    srv = Server.query.get_or_404(srv_id)
+    return render_template('server.html', server_id=srv_id)
+
 @app.route('/agent/<api_key>')
 def serve_agent_script(api_key):
-    """Serve the bash agent script for a given API key."""
     server = Server.query.filter_by(api_key=api_key).first()
     if not server:
         return 'echo "Error: Invalid API key"', 404, {'Content-Type': 'text/plain'}
     base_url = request.host_url.rstrip('/')
-    script = generate_bash_script(base_url, api_key)
-    return script, 200, {'Content-Type': 'text/plain'}
+    return generate_bash_script(base_url, api_key), 200, {'Content-Type': 'text/plain'}
 
 @app.route('/api/status')
 def api_status():
     settings = get_settings()
+    theme = get_theme()
     status_key = compute_overall_status()
     categories = Category.query.order_by(Category.sort_order).all()
     data = {
@@ -177,23 +226,69 @@ def api_status():
         'logo': settings.logo_path if settings.logo_path else None,
         'status': status_key,
         'status_label': STATUS_LABELS[status_key],
-        'status_color': STATUS_COLORS[status_key],
+        'status_color': get_status_color(status_key, theme),
+        'theme': theme_to_dict(theme),
         'categories': [],
     }
     for cat in categories:
         servers = Server.query.filter_by(category_id=cat.id).all()
         data['categories'].append({
-            'id': cat.id,
-            'name': cat.name,
+            'id': cat.id, 'name': cat.name,
             'servers': [server_to_dict(s) for s in servers],
         })
     return jsonify(data)
+
+@app.route('/api/server/<int:srv_id>')
+def api_server_detail(srv_id):
+    srv = Server.query.get_or_404(srv_id)
+    theme = get_theme()
+    now = utcnow()
+    online = srv.last_seen is not None and (now - srv.last_seen).total_seconds() < 120
+
+    # Get history snapshots (last 24h default, or query param)
+    hours = int(request.args.get('hours', 24))
+    since = now - timedelta(hours=hours)
+    snaps = StatSnapshot.query.filter(
+        StatSnapshot.server_id == srv_id,
+        StatSnapshot.ts >= since
+    ).order_by(StatSnapshot.ts).all()
+
+    history = [{
+        'ts': s.ts.isoformat(),
+        'cpu': round(s.cpu, 1), 'ram': round(s.ram, 1),
+        'disk': round(s.disk, 1),
+        'net_in': round(s.net_in, 2), 'net_out': round(s.net_out, 2),
+    } for s in snaps]
+
+    # Calculate uptime percentage (last 30 days)
+    uptime_dots = get_uptime_dots(srv, 90)
+    total_days = len([d for d in uptime_dots if d != 'none'])
+    up_days = len([d for d in uptime_dots if d == 'up'])
+    partial_days = len([d for d in uptime_dots if d == 'partial'])
+    uptime_pct = round(((up_days + partial_days * 0.5) / max(total_days, 1)) * 100, 2)
+
+    return jsonify({
+        'id': srv.id,
+        'name': srv.name,
+        'cpu': round(srv.cpu_percent, 1),
+        'ram': round(srv.ram_percent, 1),
+        'disk': round(srv.disk_percent, 1),
+        'net_in': round(srv.net_in_mbps, 2),
+        'net_out': round(srv.net_out_mbps, 2),
+        'net_max': srv.net_max_mbps,
+        'online': online,
+        'last_seen': srv.last_seen.isoformat() if srv.last_seen else None,
+        'created_at': srv.created_at.isoformat(),
+        'uptime_dots': get_uptime_dots(srv, 90),
+        'uptime_pct': uptime_pct,
+        'history': history,
+        'theme': theme_to_dict(get_theme()),
+    })
 
 # ── Agent Endpoint ───────────────────────────────────────────────────────────
 
 @app.route('/api/report', methods=['POST'])
 def agent_report():
-    """Receive stats from the bash agent running on a monitored server."""
     api_key = request.headers.get('X-API-Key') or request.json.get('api_key')
     if not api_key:
         return jsonify({'error': 'Missing API key'}), 401
@@ -207,10 +302,20 @@ def agent_report():
     server.disk_percent = min(100, max(0, float(data.get('disk', 0))))
     server.net_in_mbps = max(0, float(data.get('net_in', 0)))
     server.net_out_mbps = max(0, float(data.get('net_out', 0)))
-    server.last_seen = datetime.utcnow()
+    now = utcnow()
+    server.last_seen = now
 
-    # Update today's uptime record
-    today = datetime.utcnow().date()
+    # Save snapshot (throttle to one per minute)
+    last_snap = StatSnapshot.query.filter_by(server_id=server.id).order_by(StatSnapshot.ts.desc()).first()
+    if not last_snap or (now - last_snap.ts).total_seconds() >= 55:
+        snap = StatSnapshot(
+            server_id=server.id, ts=now,
+            cpu=server.cpu_percent, ram=server.ram_percent, disk=server.disk_percent,
+            net_in=server.net_in_mbps, net_out=server.net_out_mbps,
+        )
+        db.session.add(snap)
+
+    today = now.date()
     rec = UptimeRecord.query.filter_by(server_id=server.id, date=today).first()
     if not rec:
         rec = UptimeRecord(server_id=server.id, date=today, status='up')
@@ -226,15 +331,13 @@ def agent_report():
 
 @app.route('/api/report/down', methods=['POST'])
 def report_down():
-    """Mark a server as down (called by cron absence detection or manually)."""
     api_key = request.headers.get('X-API-Key')
     if not api_key:
         return jsonify({'error': 'Missing API key'}), 401
     server = Server.query.filter_by(api_key=api_key).first()
     if not server:
         return jsonify({'error': 'Invalid API key'}), 401
-
-    today = datetime.utcnow().date()
+    today = utcnow().date()
     rec = UptimeRecord.query.filter_by(server_id=server.id, date=today).first()
     if not rec:
         rec = UptimeRecord(server_id=server.id, date=today, status='down')
@@ -292,6 +395,19 @@ def admin_settings():
         return jsonify({'ok': True, 'logo': s.logo_path, 'site_name': s.site_name})
     return jsonify({'site_name': s.site_name, 'logo': s.logo_path})
 
+@app.route('/admin/api/theme', methods=['GET', 'POST'])
+@login_required
+def admin_theme():
+    t = get_theme()
+    if request.method == 'POST':
+        data = request.json
+        for col in ThemeSettings.__table__.columns:
+            if col.name != 'id' and col.name in data:
+                setattr(t, col.name, data[col.name])
+        db.session.commit()
+        return jsonify({'ok': True, 'theme': theme_to_dict(t)})
+    return jsonify(theme_to_dict(t))
+
 @app.route('/admin/api/categories', methods=['GET', 'POST'])
 @login_required
 def admin_categories():
@@ -324,24 +440,13 @@ def admin_servers():
     if request.method == 'POST':
         data = request.json
         api_key = secrets.token_hex(32)
-        srv = Server(
-            name=data['name'],
-            category_id=data['category_id'],
-            api_key=api_key,
-            net_max_mbps=float(data.get('net_max_mbps', 1000)),
-        )
+        srv = Server(name=data['name'], category_id=data['category_id'], api_key=api_key,
+                     net_max_mbps=float(data.get('net_max_mbps', 1000)))
         db.session.add(srv)
         db.session.commit()
-
         base_url = request.host_url.rstrip('/')
-        bash_script = generate_bash_script(base_url, api_key)
-
-        return jsonify({
-            'id': srv.id,
-            'name': srv.name,
-            'api_key': api_key,
-            'bash_script': bash_script,
-        })
+        return jsonify({'id': srv.id, 'name': srv.name, 'api_key': api_key,
+                        'bash_script': generate_bash_script(base_url, api_key)})
     servers = Server.query.all()
     return jsonify([{
         'id': s.id, 'name': s.name, 'category_id': s.category_id,
@@ -373,10 +478,16 @@ def admin_server_script(srv_id):
 
 def generate_bash_script(base_url, api_key):
     return f'''#!/usr/bin/env bash
-# Status Page Agent — paste this into your server and run with:
-#   bash <(curl -s {base_url}/agent/{api_key}) &
-# Or save it and add to cron:  */1 * * * * /path/to/agent.sh
+# Status Page Agent — installs as a systemd service that runs 24/7
+# Usage: bash <(curl -s {base_url}/agent/{api_key})
 
+set -e
+
+AGENT_PATH="/opt/statuspage-agent.sh"
+SERVICE_NAME="statuspage-agent"
+
+cat > "$AGENT_PATH" << 'AGENT'
+#!/usr/bin/env bash
 API_KEY="{api_key}"
 URL="{base_url}/api/report"
 INTERVAL=30
@@ -412,30 +523,44 @@ while true; do
 
     sleep $INTERVAL
 done
+AGENT
+
+chmod +x "$AGENT_PATH"
+
+cat > /etc/systemd/system/$SERVICE_NAME.service << EOF
+[Unit]
+Description=Status Page Monitoring Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/bin/bash $AGENT_PATH
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable $SERVICE_NAME
+systemctl restart $SERVICE_NAME
+
+echo ""
+echo "Status page agent installed and running as a systemd service."
+echo "  Service: $SERVICE_NAME"
+echo "  Status:  systemctl status $SERVICE_NAME"
+echo "  Logs:    journalctl -u $SERVICE_NAME -f"
+echo "  Remove:  systemctl disable --now $SERVICE_NAME && rm $AGENT_PATH /etc/systemd/system/$SERVICE_NAME.service"
 '''
-
-# ── Background Uptime Checker ────────────────────────────────────────────────
-
-def check_server_uptime():
-    """Run periodically to mark servers as down if they haven't reported."""
-    now = datetime.utcnow()
-    today = now.date()
-    servers = Server.query.all()
-    for server in servers:
-        if server.last_seen and (now - server.last_seen).total_seconds() > 120:
-            rec = UptimeRecord.query.filter_by(server_id=server.id, date=today).first()
-            if not rec:
-                rec = UptimeRecord(server_id=server.id, date=today, status='down')
-                db.session.add(rec)
-            elif rec.status == 'up':
-                rec.status = 'partial'
-    db.session.commit()
 
 # ── Init ─────────────────────────────────────────────────────────────────────
 
 with app.app_context():
     db.create_all()
-    get_settings()  # ensure defaults exist
+    get_settings()
+    get_theme()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

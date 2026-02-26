@@ -4,114 +4,107 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/admin.css">
 </head>
-<body class="admin-body">
-    <div class="admin-wrap">
-        <!-- Header -->
-        <div class="admin-header">
-            <h1>Admin Dashboard</h1>
-            <div style="display:flex;gap:.75rem;align-items:center">
-                <a href="/">← Back to Status Page</a>
-                <a href="/admin/logout" style="color:#ef4444">Logout</a>
+<body>
+    <div id="admin-app">
+        <header class="admin-header">
+            <div class="admin-header-inner">
+                <a href="/" class="admin-brand">← Back to Status</a>
+                <span class="admin-title">Admin Dashboard</span>
+                <a href="/admin/logout" class="admin-logout">Logout</a>
+            </div>
+        </header>
+
+        <nav class="admin-tabs">
+            <button class="tab-btn active" data-tab="servers">Servers</button>
+            <button class="tab-btn" data-tab="categories">Categories</button>
+            <button class="tab-btn" data-tab="settings">Settings</button>
+            <button class="tab-btn" data-tab="theme">Theme</button>
+        </nav>
+
+        <!-- Servers Tab -->
+        <div class="tab-panel active" id="tab-servers">
+            <div class="panel-header">
+                <h2>Servers</h2>
+                <button class="btn-primary" id="btn-add-server">+ Add Server</button>
+            </div>
+            <div id="servers-list" class="items-list"></div>
+
+            <!-- Add/Edit server modal -->
+            <div class="modal-overlay" id="server-modal" style="display:none;">
+                <div class="modal">
+                    <h3 id="server-modal-title">Add Server</h3>
+                    <label>Name<input type="text" id="srv-name"></label>
+                    <label>Category
+                        <select id="srv-category"></select>
+                    </label>
+                    <label>Max Network (Mbps)<input type="number" id="srv-netmax" value="1000"></label>
+                    <div class="modal-actions">
+                        <button class="btn-secondary" id="srv-cancel">Cancel</button>
+                        <button class="btn-primary" id="srv-save">Save</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Script modal -->
+            <div class="modal-overlay" id="script-modal" style="display:none;">
+                <div class="modal modal-wide">
+                    <h3>Agent Install Script</h3>
+                    <p class="script-hint">Run this on your server (as root):</p>
+                    <pre id="script-content" class="script-block"></pre>
+                    <div class="modal-actions">
+                        <button class="btn-primary" id="script-copy">Copy</button>
+                        <button class="btn-secondary" id="script-close">Close</button>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Settings Panel -->
-        <div class="panel" id="settings-panel">
-            <h2>⚙️ Site Settings</h2>
-            <form id="settings-form" enctype="multipart/form-data">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Site Name</label>
-                        <input type="text" name="site_name" id="inp-site-name">
-                    </div>
-                    <div class="form-group">
-                        <label>New Password (leave blank to keep)</label>
-                        <input type="password" name="new_password" placeholder="••••••••">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Logo</label>
-                        <input type="file" name="logo" accept="image/*">
-                    </div>
-                    <div style="display:flex;align-items:flex-end">
-                        <button type="submit" class="btn btn-primary">Save Settings</button>
+        <!-- Categories Tab -->
+        <div class="tab-panel" id="tab-categories">
+            <div class="panel-header">
+                <h2>Categories</h2>
+                <button class="btn-primary" id="btn-add-cat">+ Add Category</button>
+            </div>
+            <div id="categories-list" class="items-list"></div>
+
+            <div class="modal-overlay" id="cat-modal" style="display:none;">
+                <div class="modal">
+                    <h3 id="cat-modal-title">Add Category</h3>
+                    <label>Name<input type="text" id="cat-name"></label>
+                    <label>Sort Order<input type="number" id="cat-order" value="0"></label>
+                    <div class="modal-actions">
+                        <button class="btn-secondary" id="cat-cancel">Cancel</button>
+                        <button class="btn-primary" id="cat-save">Save</button>
                     </div>
                 </div>
-                <img id="logo-preview" class="logo-preview" src="" style="display:none">
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div class="tab-panel" id="tab-settings">
+            <div class="panel-header"><h2>Site Settings</h2></div>
+            <form id="settings-form" class="settings-form">
+                <label>Site Name<input type="text" id="set-sitename"></label>
+                <label>Logo<input type="file" id="set-logo" accept="image/*"></label>
+                <div id="set-logo-preview" class="logo-preview"></div>
+                <label>New Admin Password<input type="password" id="set-password" placeholder="Leave blank to keep current"></label>
+                <button type="submit" class="btn-primary">Save Settings</button>
             </form>
         </div>
 
-        <!-- Categories Panel -->
-        <div class="panel">
-            <h2>📁 Categories</h2>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Category Name</label>
-                    <input type="text" id="inp-cat-name" placeholder="e.g. Dedicated">
-                </div>
-                <div class="form-group" style="max-width:100px">
-                    <label>Order</label>
-                    <input type="number" id="inp-cat-order" value="0">
-                </div>
-                <div style="display:flex;align-items:flex-end">
-                    <button class="btn btn-primary" onclick="addCategory()">Add Category</button>
-                </div>
-            </div>
-            <table class="tbl" id="cat-table">
-                <thead><tr><th>Name</th><th>Order</th><th></th></tr></thead>
-                <tbody></tbody>
-            </table>
-        </div>
-
-        <!-- Servers Panel -->
-        <div class="panel">
-            <h2>🖥️ Servers</h2>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Server Name</label>
-                    <input type="text" id="inp-srv-name" placeholder="e.g. dedi01.uk.lucid.cool">
-                </div>
-                <div class="form-group">
-                    <label>Category</label>
-                    <select id="inp-srv-cat"></select>
-                </div>
-                <div class="form-group" style="max-width:120px">
-                    <label>Max Net (Mbps)</label>
-                    <input type="number" id="inp-srv-net" value="1000">
-                </div>
-                <div style="display:flex;align-items:flex-end">
-                    <button class="btn btn-primary" onclick="addServer()">Add Server</button>
-                </div>
-            </div>
-            <table class="tbl" id="srv-table">
-                <thead><tr><th>Name</th><th>Category</th><th>Last Seen</th><th></th></tr></thead>
-                <tbody></tbody>
-            </table>
+        <!-- Theme Tab -->
+        <div class="tab-panel" id="tab-theme">
+            <div class="panel-header"><h2>Theme Customization</h2></div>
+            <div id="theme-editor" class="theme-editor"></div>
+            <button class="btn-primary" id="btn-save-theme" style="margin-top:20px;">Save Theme</button>
+            <button class="btn-secondary" id="btn-reset-theme" style="margin-top:20px;margin-left:10px;">Reset to Default</button>
         </div>
     </div>
-
-    <!-- Script Modal -->
-    <div class="modal-overlay" id="script-modal">
-        <div class="modal">
-            <h2>🔑 Server Agent Script</h2>
-            <p style="font-size:.85rem;color:#8b949e;margin-bottom:.5rem">
-                Paste this script on your server and run it. It will periodically report stats to this status page.
-            </p>
-            <div class="script-box" id="script-content">
-                <button class="copy-btn" onclick="copyScript()">Copy</button>
-                <code id="script-code"></code>
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-primary" onclick="closeScriptModal()">Close</button>
-            </div>
-        </div>
-    </div>
-
     <script src="/static/js/admin.js"></script>
 </body>
 </html>

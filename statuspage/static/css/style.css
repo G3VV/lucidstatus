@@ -1,260 +1,254 @@
-/* ── Reset ────────────────────────────────────────────────────────────────── */
+/* ── CSS Custom Properties (theme) ────────────────────────────────────────── */
+:root {
+    --bg-outer: #1C2327;
+    --bg-panel: #1E252A;
+    --bg-card: #28333A;
+    --bg-bar: #32434D;
+    --text-primary: #F2FAFF;
+    --text-secondary: #8B949E;
+    --accent: #307EB4;
+    --accent-shadow: #153C57;
+    --border-online: #83FF78;
+    --border-offline: #FF5D5D;
+    --border-partial: #FFD95D;
+    --bar-cpu: #78A3FF;
+    --bar-ram: #78FFB5;
+    --bar-disk: #E6FF78;
+    --bar-net-in: #C7FF78;
+    --bar-net-out: rgba(255,183,120,0.75);
+    --dot-up: #83FF78;
+    --dot-down: #FF5D5D;
+    --dot-partial: #FFD95D;
+    --dot-grey: #32434D;
+    --glow-from: rgba(37,111,162,0.1);
+    --status-operational: #83FF78;
+    --status-degraded: #FFD95D;
+    --status-partial: #FFB778;
+    --status-major: #FF5D5D;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
 body {
-    font-family: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #1C2327;
-    color: #F2FAFF;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-outer);
+    color: var(--text-primary);
     min-height: 100vh;
-    line-height: 1.5;
-    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
 }
 
-/* ── Content Panel (center column) ───────────────────────────────────────── */
-.content-panel {
-    position: relative;
-    max-width: 1246px;
+/* ── Header ───────────────────────────────────────────────────────────────── */
+#header {
+    background: linear-gradient(180deg, var(--glow-from) 0%, transparent 100%);
+    padding: 28px 0 10px;
+}
+.header-inner {
+    max-width: 880px;
     margin: 0 auto;
-    min-height: 100vh;
-    background: #1E252A;
-}
-
-/* ── Header Gradient Glow ────────────────────────────────────────────────── */
-.header-glow {
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 207px;
-    background: linear-gradient(180deg, rgba(37, 111, 162, 0.1) 0%, rgba(30, 37, 42, 0) 100%);
-    pointer-events: none;
-    z-index: 0;
-}
-
-/* ── Inner Container ─────────────────────────────────────────────────────── */
-.inner {
-    position: relative;
-    z-index: 1;
-    max-width: 1126px;
-    margin: 0 auto;
-    padding: 0 20px;
-}
-
-/* ── Header / Logo ───────────────────────────────────────────────────────── */
-.header {
+    padding: 0 24px;
     display: flex;
-    justify-content: center;
+    align-items: center;
+}
+.logo-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.logo-area img {
+    height: 38px;
+    width: auto;
+}
+.logo-area .site-name {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    text-shadow: 0 0 20px var(--accent-shadow);
+}
+
+/* ── Status Banner ────────────────────────────────────────────────────────── */
+.status-banner {
+    max-width: 880px;
+    margin: 18px auto 24px;
+    padding: 0 24px;
+    display: flex;
     align-items: center;
     gap: 14px;
-    padding-top: 34px;
-    padding-bottom: 30px;
-    position: relative;
 }
-.logo-img {
-    width: 70px;
-    height: 70px;
-    object-fit: contain;
-}
-.site-name {
-    font-size: 28px;
-    font-weight: 700;
-    color: #307EB4;
-    text-shadow: 0.3px 2px 0px #153C57;
-    line-height: 1;
-}
-
-/* ── Settings Gear ───────────────────────────────────────────────────────── */
-.settings-btn {
-    position: absolute;
-    top: 34px;
-    right: 0;
-    background: rgba(255,255,255,.04);
-    border: 1px solid rgba(255,255,255,.05);
-    border-radius: 8px;
-    padding: 8px;
-    cursor: pointer;
-    color: #4a5860;
-    transition: all .2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-}
-.settings-btn:hover { color: #8b949e; background: rgba(255,255,255,.07); }
-.settings-btn svg { width: 18px; height: 18px; display: block; }
-
-/* ── Status Banner ───────────────────────────────────────────────────────── */
-.status-banner {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    height: 39px;
-    padding: 0 16px;
-    background: #28333A;
-    border-left: 5px solid var(--status-color, #83FF78);
-    border-radius: 10px;
-    margin-bottom: 24px;
-}
-.status-dot {
-    width: 8px;
-    height: 8px;
+.status-dot-large {
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
-    background: var(--status-color, #83FF78);
-    box-shadow: 0 0 6px var(--status-color, #83FF78);
-    animation: pulse 2s ease-in-out infinite;
     flex-shrink: 0;
+    background: var(--dot-grey);
 }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
-.status-label {
-    font-size: 18px;
-    font-weight: 500;
-    color: #F2FAFF;
-    line-height: 23px;
+.status-text {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
-/* ── Category ────────────────────────────────────────────────────────────── */
+/* ── Main Container ───────────────────────────────────────────────────────── */
+main {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 24px 48px;
+}
+
+/* ── Category ─────────────────────────────────────────────────────────────── */
 .category {
-    margin-bottom: 18px;
+    margin-bottom: 28px;
 }
-.category-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 10px;
-}
-.category-label {
-    font-size: 10px;
-    font-weight: 500;
-    color: #F2FAFF;
-    background: #28333A;
-    border-radius: 10px;
-    padding: 3px 10px;
-    line-height: 13px;
-    text-align: center;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-.category-line {
-    flex: 1;
-    height: 4px;
-    background: rgba(40, 51, 58, 0.5);
-    border-radius: 10px;
+.category-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    margin-bottom: 12px;
 }
 
-/* ── Server Grid ─────────────────────────────────────────────────────────── */
-.server-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px 18px;
-}
-@media (max-width: 840px) {
-    .server-grid { grid-template-columns: 1fr; }
-}
-
-/* ── Server Card ─────────────────────────────────────────────────────────── */
+/* ── Server Card ──────────────────────────────────────────────────────────── */
 .server-card {
-    background: #28333A;
-    border-left: 5px solid #83FF78;
-    border-radius: 10px;
-    padding: 6px 14px 8px 14px;
-    min-height: 66px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    transition: opacity .2s, border-color .2s;
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: background .15s, transform .15s;
+    border: 1px solid transparent;
 }
-.server-card.offline {
-    border-left-color: #FF5D5D;
-    opacity: .55;
+.server-card:hover {
+    background: #2e3b44;
+    transform: translateY(-1px);
 }
-.server-card.partial-offline {
-    border-left-color: #FFD95D;
-}
-
-/* ── Server Header Row ───────────────────────────────────────────────────── */
-.server-header {
+.server-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 4px;
+    margin-bottom: 14px;
+}
+.server-name-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.server-status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
 }
 .server-name {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
-    color: #F2FAFF;
-    line-height: 20px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex-shrink: 1;
-    min-width: 0;
+    color: var(--text-primary);
 }
 
-/* ── Uptime Dots ─────────────────────────────────────────────────────────── */
-.uptime-dots {
+/* ── Resource Bars ────────────────────────────────────────────────────────── */
+.bars-row {
     display: flex;
-    gap: 4px;
-    flex-shrink: 0;
-    margin-left: 10px;
+    gap: 10px;
+    align-items: flex-end;
+    margin-bottom: 14px;
+}
+.bar-group {
+    flex: 1;
+    position: relative;
+}
+.bar-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.bar-outer {
+    width: 100%;
+    height: 32px;
+    background: var(--bg-bar);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+}
+.bar-fill {
+    width: 100%;
+    border-radius: 6px;
+    transition: height 0.5s ease;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+}
+.bar-fill.cpu { background: var(--bar-cpu); }
+.bar-fill.ram { background: var(--bar-ram); }
+.bar-fill.disk { background: var(--bar-disk); }
+.bar-fill.net-in { background: var(--bar-net-in); }
+.bar-fill.net-out { background: var(--bar-net-out); }
+
+/* ── Bar Tooltip ──────────────────────────────────────────────────────────── */
+.bar-tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #111517;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s;
+    z-index: 20;
+    box-shadow: 0 4px 12px rgba(0,0,0,.4);
+}
+.bar-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #111517;
+}
+.bar-group:hover .bar-tooltip {
+    opacity: 1;
+}
+
+/* ── Network special (stacked) ────────────────────────────────────────────── */
+.bar-outer.net-bar {
+    position: relative;
+}
+.bar-outer.net-bar .bar-fill.net-in {
+    z-index: 1;
+}
+.bar-outer.net-bar .bar-fill.net-out {
+    z-index: 2;
+}
+
+/* ── Uptime Dots ──────────────────────────────────────────────────────────── */
+.uptime-row {
+    display: flex;
+    align-items: center;
+    gap: 3px;
 }
 .uptime-dot {
     width: 10px;
     height: 10px;
-    border-radius: 5px;
-    background: #32434D;
+    border-radius: 4px;
     flex-shrink: 0;
 }
-.uptime-dot.up      { background: #83FF78; }
-.uptime-dot.down    { background: #FF5D5D; }
-.uptime-dot.partial { background: #FFD95D; }
-.uptime-dot.grey    { background: #32434D; }
+.uptime-dot.up { background: var(--dot-up); }
+.uptime-dot.down { background: var(--dot-down); }
+.uptime-dot.partial { background: var(--dot-partial); }
+.uptime-dot.grey, .uptime-dot.none { background: var(--dot-grey); }
 
-/* ── Bars Row ────────────────────────────────────────────────────────────── */
-.bars {
-    display: flex;
-    gap: 7px;
-}
-
-/* ── Single Bar ──────────────────────────────────────────────────────────── */
-.bar-wrap {
-    flex: 1;
-    min-width: 0;
-}
-.bar-bg {
-    width: 100%;
-    height: 28px;
-    background: #32434D;
-    border-radius: 5px;
-    position: relative;
-    overflow: hidden;
-}
-.bar-fill {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    border-radius: 5px;
-    transition: height .6s ease;
-}
-
-/* ── Bar Colors ──────────────────────────────────────────────────────────── */
-.bar-cpu  .bar-fill { background: #78A3FF; }
-.bar-ram  .bar-fill { background: #78FFB5; }
-.bar-disk .bar-fill { background: #E6FF78; }
-
-/* Network: two stacked fills — in (green) and out (orange overlay) */
-.bar-net .bar-fill-in {
-    position: absolute;
-    bottom: 0; left: 0; width: 100%;
-    border-radius: 5px;
-    background: #C7FF78;
-    transition: height .6s ease;
-}
-.bar-net .bar-fill-out {
-    position: absolute;
-    bottom: 0; left: 0; width: 100%;
-    border-radius: 5px;
-    background: rgba(255, 183, 120, 0.75);
-    transition: height .6s ease;
-}
-
-/* (no footer) */
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-outer); }
+::-webkit-scrollbar-thumb { background: var(--bg-bar); border-radius: 4px; }

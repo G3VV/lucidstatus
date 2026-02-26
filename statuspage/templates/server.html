@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Details</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <style>
+        .detail-wrap{max-width:960px;margin:0 auto;padding:24px 20px;}
+        .back-link{color:var(--accent);text-decoration:none;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;}
+        .back-link:hover{text-decoration:underline;}
+        .detail-header{display:flex;align-items:center;gap:16px;margin:20px 0 8px;}
+        .detail-header h1{font-size:26px;color:var(--text-primary);margin:0;font-weight:700;}
+        .detail-status{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+        .detail-meta{color:var(--text-secondary);font-size:13px;margin-bottom:28px;}
+        .detail-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:28px;}
+        .stat-card{background:var(--bg-card);border-radius:10px;padding:18px 20px;}
+        .stat-card .stat-label{font-size:12px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+        .stat-card .stat-value{font-size:28px;font-weight:700;color:var(--text-primary);}
+        .stat-card .stat-bar-wrap{height:8px;background:var(--bg-bar);border-radius:4px;margin-top:10px;overflow:hidden;}
+        .stat-card .stat-bar-fill{height:100%;border-radius:4px;transition:width .4s;}
+        .chart-section{background:var(--bg-card);border-radius:10px;padding:22px;margin-bottom:20px;}
+        .chart-section h3{color:var(--text-primary);font-size:16px;margin:0 0 4px;font-weight:600;}
+        .chart-section .chart-sub{color:var(--text-secondary);font-size:12px;margin-bottom:16px;}
+        .chart-controls{display:flex;gap:8px;margin-bottom:16px;}
+        .chart-controls button{background:var(--bg-bar);border:none;color:var(--text-secondary);padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;}
+        .chart-controls button.active{background:var(--accent);color:#fff;}
+        .chart-canvas-wrap{position:relative;height:220px;}
+        .uptime-section{background:var(--bg-card);border-radius:10px;padding:22px;margin-bottom:20px;}
+        .uptime-section h3{color:var(--text-primary);font-size:16px;margin:0 0 14px;font-weight:600;}
+        .uptime-pct{font-size:32px;font-weight:700;margin-bottom:16px;}
+        .uptime-dots-detail{display:flex;gap:3px;flex-wrap:wrap;}
+        .uptime-dots-detail .dot{width:8px;height:28px;border-radius:3px;position:relative;}
+        .uptime-dots-detail .dot:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+            background:#1a1a1a;color:#fff;font-size:11px;padding:4px 8px;border-radius:4px;white-space:nowrap;z-index:10;pointer-events:none;}
+    </style>
+</head>
+<body>
+    <div class="detail-wrap" id="detail-app">
+        <a href="/" class="back-link">← Back to Status</a>
+        <div class="detail-header">
+            <div class="detail-status" id="d-status"></div>
+            <h1 id="d-name">Loading...</h1>
+        </div>
+        <div class="detail-meta" id="d-meta"></div>
+
+        <div class="detail-stats" id="d-stats"></div>
+
+        <div class="uptime-section">
+            <h3>Uptime <span id="d-uptime-pct" class="uptime-pct" style="float:right;font-size:22px;"></span></h3>
+            <div class="uptime-dots-detail" id="d-uptime-dots"></div>
+        </div>
+
+        <div class="chart-section">
+            <h3>Resource Usage</h3>
+            <p class="chart-sub">CPU, RAM & Disk over time</p>
+            <div class="chart-controls" id="chart-range">
+                <button data-hours="1">1h</button>
+                <button data-hours="6">6h</button>
+                <button data-hours="24" class="active">24h</button>
+                <button data-hours="168">7d</button>
+            </div>
+            <div class="chart-canvas-wrap"><canvas id="chart-resources"></canvas></div>
+        </div>
+
+        <div class="chart-section">
+            <h3>Network</h3>
+            <p class="chart-sub">Inbound & outbound traffic (Mbps)</p>
+            <div class="chart-canvas-wrap"><canvas id="chart-network"></canvas></div>
+        </div>
+    </div>
+    <script>
+    const SERVER_ID = {{ server_id }};
+    </script>
+    <script src="/static/js/server.js"></script>
+</body>
+</html>

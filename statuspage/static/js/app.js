@@ -1,158 +1,126 @@
+/* ── Main Status Page JS ──────────────────────────────────────────────────── */
 (function () {
+    const API = '/api/status';
     const POLL_INTERVAL = 10000;
 
-    function renderDot(status) {
-        if (status === 'none') return null;
-        const d = document.createElement('div');
-        d.className = 'uptime-dot ' + status;
-        const titles = { up: 'Online', down: 'Down', partial: 'Partial outage', grey: 'No data' };
-        d.title = titles[status] || 'No data';
-        return d;
-    }
-
-    function renderBar(cls, pct) {
-        const wrap = document.createElement('div');
-        wrap.className = 'bar-wrap';
-        const bg = document.createElement('div');
-        bg.className = 'bar-bg ' + cls;
-        const fill = document.createElement('div');
-        fill.className = 'bar-fill';
-        const h = Math.min(28, Math.max(2, (pct / 100) * 28));
-        fill.style.height = h + 'px';
-        bg.appendChild(fill);
-        wrap.appendChild(bg);
-        return wrap;
-    }
-
-    function renderNetBar(inPct, outPct) {
-        const wrap = document.createElement('div');
-        wrap.className = 'bar-wrap';
-        const bg = document.createElement('div');
-        bg.className = 'bar-bg bar-net';
-
-        // In fill (total combined, green)
-        const fillIn = document.createElement('div');
-        fillIn.className = 'bar-fill-in';
-        const hIn = Math.min(28, Math.max(0, (inPct / 100) * 28));
-        fillIn.style.height = hIn + 'px';
-
-        // Out fill (orange overlay, usually smaller)
-        const fillOut = document.createElement('div');
-        fillOut.className = 'bar-fill-out';
-        const hOut = Math.min(28, Math.max(0, (outPct / 100) * 28));
-        fillOut.style.height = hOut + 'px';
-
-        bg.appendChild(fillIn);
-        bg.appendChild(fillOut);
-        wrap.appendChild(bg);
-        return wrap;
-    }
-
-    function renderServer(srv) {
-        const card = document.createElement('div');
-        card.className = 'server-card' + (srv.online ? '' : ' offline');
-
-        // Header: name + dots
-        const header = document.createElement('div');
-        header.className = 'server-header';
-
-        const name = document.createElement('div');
-        name.className = 'server-name';
-        name.textContent = srv.name;
-
-        const dots = document.createElement('div');
-        dots.className = 'uptime-dots';
-        (srv.uptime || []).forEach(function (s) {
-            const dot = renderDot(s);
-            if (dot) dots.appendChild(dot);
-        });
-
-        header.appendChild(name);
-        header.appendChild(dots);
-        card.appendChild(header);
-
-        // Bars: CPU, RAM, Disk, Network
-        const bars = document.createElement('div');
-        bars.className = 'bars';
-
-        bars.appendChild(renderBar('bar-cpu', srv.cpu));
-        bars.appendChild(renderBar('bar-ram', srv.ram));
-        bars.appendChild(renderBar('bar-disk', srv.disk));
-
-        // Network: in and out as separate percentages of max
-        const netInPct = srv.net_max > 0 ? (srv.net_in / srv.net_max) * 100 : 0;
-        const netOutPct = srv.net_max > 0 ? (srv.net_out / srv.net_max) * 100 : 0;
-        // Use combined for the green fill, out only for the orange overlay
-        const netCombinedPct = srv.net_max > 0 ? ((srv.net_in + srv.net_out) / srv.net_max) * 100 : 0;
-        bars.appendChild(renderNetBar(netCombinedPct, netOutPct));
-
-        card.appendChild(bars);
-        return card;
-    }
-
-    function render(data) {
-        // Header
-        document.title = (data.site_name || 'Status') + ' — Status Page';
-        var nameEl = document.getElementById('site-name');
-        const logo = document.getElementById('logo-img');
-        if (data.logo) {
-            logo.src = data.logo;
-            logo.style.display = 'block';
-            nameEl.style.display = 'none';
-        } else {
-            logo.style.display = 'none';
-            nameEl.textContent = data.site_name || 'Status';
-            nameEl.style.display = '';
+    function applyTheme(theme) {
+        const root = document.documentElement;
+        const map = {
+            bg_outer: '--bg-outer', bg_panel: '--bg-panel', bg_card: '--bg-card',
+            bg_bar: '--bg-bar', text_primary: '--text-primary', text_secondary: '--text-secondary',
+            accent: '--accent', border_online: '--border-online', border_offline: '--border-offline',
+            border_partial: '--border-partial', bar_cpu: '--bar-cpu', bar_ram: '--bar-ram',
+            bar_disk: '--bar-disk', bar_net_in: '--bar-net-in', bar_net_out: '--bar-net-out',
+            dot_up: '--dot-up', dot_down: '--dot-down', dot_partial: '--dot-partial',
+            dot_grey: '--dot-grey', glow_from: '--glow-from',
+            status_operational: '--status-operational', status_degraded: '--status-degraded',
+            status_partial: '--status-partial', status_major: '--status-major',
+        };
+        for (const [key, prop] of Object.entries(map)) {
+            if (theme[key]) root.style.setProperty(prop, theme[key]);
         }
+    }
 
-        // Status banner
-        var banner = document.getElementById('status-banner');
-        var dot = document.getElementById('status-dot');
-        var label = document.getElementById('status-label');
-        banner.style.setProperty('--status-color', data.status_color);
+    function renderLogo(data) {
+        const area = document.getElementById('logo-area');
+        if (data.logo) {
+            area.innerHTML = `<img src="${data.logo}" alt="Logo">`;
+        } else {
+            area.innerHTML = `<span class="site-name">${escHtml(data.site_name)}</span>`;
+        }
+    }
+
+    function renderBanner(data) {
+        const dot = document.getElementById('status-dot');
+        const txt = document.getElementById('status-text');
         dot.style.background = data.status_color;
-        dot.style.boxShadow = '0 0 6px ' + data.status_color;
-        label.textContent = data.status_label;
+        dot.style.boxShadow = `0 0 10px ${data.status_color}40`;
+        txt.textContent = data.status_label;
+    }
 
-        // Categories
-        var container = document.getElementById('categories-container');
-        container.innerHTML = '';
-        (data.categories || []).forEach(function (cat) {
-            if (!cat.servers || cat.servers.length === 0) return;
+    function pct(val) { return Math.min(100, Math.max(0, val)); }
 
-            var sec = document.createElement('div');
-            sec.className = 'category';
+    function makeBarGroup(label, value, cssClass, tooltipText) {
+        const h = pct(value);
+        return `<div class="bar-group">
+            <div class="bar-tooltip">${escHtml(tooltipText)}</div>
+            <div class="bar-label">${label}</div>
+            <div class="bar-outer">
+                <div class="bar-fill ${cssClass}" style="height:${h}%"></div>
+            </div>
+        </div>`;
+    }
 
-            // Category header: pill label + line
-            var hdr = document.createElement('div');
-            hdr.className = 'category-header';
-            var lbl = document.createElement('div');
-            lbl.className = 'category-label';
-            lbl.textContent = cat.name;
-            var line = document.createElement('div');
-            line.className = 'category-line';
-            hdr.appendChild(lbl);
-            hdr.appendChild(line);
-            sec.appendChild(hdr);
+    function makeNetBar(server) {
+        const maxNet = server.net_max || 1000;
+        const pctIn = pct((server.net_in / maxNet) * 100);
+        const pctOut = pct((server.net_out / maxNet) * 100);
+        const tip = `In: ${server.net_in} Mbps / Out: ${server.net_out} Mbps`;
+        return `<div class="bar-group">
+            <div class="bar-tooltip">${escHtml(tip)}</div>
+            <div class="bar-label">NET</div>
+            <div class="bar-outer net-bar">
+                <div class="bar-fill net-in" style="height:${pctIn}%"></div>
+                <div class="bar-fill net-out" style="height:${pctOut}%"></div>
+            </div>
+        </div>`;
+    }
 
-            // Server grid
-            var grid = document.createElement('div');
-            grid.className = 'server-grid';
-            (cat.servers || []).forEach(function (srv) {
-                grid.appendChild(renderServer(srv));
-            });
-            sec.appendChild(grid);
-            container.appendChild(sec);
-        });
+    function renderCategories(categories) {
+        const container = document.getElementById('categories-container');
+        if (!categories.length) {
+            container.innerHTML = '<p style="color:var(--text-secondary);text-align:center;margin-top:40px;">No servers configured yet.</p>';
+            return;
+        }
+        let html = '';
+        for (const cat of categories) {
+            html += `<div class="category"><div class="category-title">${escHtml(cat.name)}</div>`;
+            for (const srv of cat.servers) {
+                const dotColor = srv.online ? 'var(--border-online)' : 'var(--border-offline)';
+                const bars = makeBarGroup('CPU', srv.cpu, 'cpu', `CPU: ${srv.cpu}%`)
+                    + makeBarGroup('RAM', srv.ram, 'ram', `RAM: ${srv.ram}%`)
+                    + makeBarGroup('DISK', srv.disk, 'disk', `Disk: ${srv.disk}%`)
+                    + makeNetBar(srv);
+
+                let dots = '';
+                for (const d of srv.uptime) {
+                    dots += `<div class="uptime-dot ${d}"></div>`;
+                }
+
+                html += `<div class="server-card" onclick="location.href='/server/${srv.id}'">
+                    <div class="server-top">
+                        <div class="server-name-area">
+                            <div class="server-status-dot" style="background:${dotColor};box-shadow:0 0 8px ${dotColor}40"></div>
+                            <div class="server-name">${escHtml(srv.name)}</div>
+                        </div>
+                    </div>
+                    <div class="bars-row">${bars}</div>
+                    <div class="uptime-row">${dots}</div>
+                </div>`;
+            }
+            html += '</div>';
+        }
+        container.innerHTML = html;
     }
 
     async function poll() {
         try {
-            var r = await fetch('/api/status');
-            if (r.ok) render(await r.json());
+            const res = await fetch(API);
+            const data = await res.json();
+            if (data.theme) applyTheme(data.theme);
+            renderLogo(data);
+            renderBanner(data);
+            renderCategories(data.categories);
+            document.title = data.site_name + ' — Status';
         } catch (e) {
-            console.error('Poll failed', e);
+            console.error('Poll failed:', e);
         }
+    }
+
+    function escHtml(str) {
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
     }
 
     poll();
