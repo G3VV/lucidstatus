@@ -44,14 +44,12 @@
         const lastSeen = data.last_seen ? new Date(data.last_seen).toLocaleString() : 'Never';
         document.getElementById('d-meta').textContent = `Last seen: ${lastSeen} · Created: ${new Date(data.created_at).toLocaleDateString()}`;
 
-        // Stat cards
+        // Stat cards (CPU, RAM, Swap, Disk)
         const stats = [
             { label: 'CPU', value: data.cpu + '%', pct: data.cpu, color: 'var(--bar-cpu)' },
             { label: 'RAM', value: data.ram + '%', pct: data.ram, color: 'var(--bar-ram)' },
             { label: 'Swap', value: (data.swap || 0) + '%', pct: data.swap || 0, color: '#B78FFF' },
             { label: 'Disk', value: data.disk + '%', pct: data.disk, color: 'var(--bar-disk)' },
-            { label: 'Net In', value: data.net_in + ' Mbps', pct: (data.net_in / data.net_max) * 100, color: 'var(--bar-net-in)' },
-            { label: 'Net Out', value: data.net_out + ' Mbps', pct: (data.net_out / data.net_max) * 100, color: 'var(--bar-net-out)' },
         ];
         document.getElementById('d-stats').innerHTML = stats.map(s => `
             <div class="stat-card">
@@ -61,6 +59,29 @@
                     <div class="stat-bar-fill" style="width:${Math.min(100, s.pct)}%;background:${s.color}"></div>
                 </div>
             </div>`).join('');
+
+        // Network card (combined IN + OUT)
+        const inPct = Math.min(100, (data.net_in / data.net_max) * 100);
+        const outPct = Math.min(100, (data.net_out / data.net_max) * 100);
+        document.getElementById('d-net-card').innerHTML = `
+            <div class="net-half">
+                <div class="stat-label">Net In</div>
+                <div class="stat-value">${data.net_in} <span style="font-size:14px;font-weight:500;color:var(--text-secondary)">Mbps</span></div>
+            </div>
+            <div class="net-half">
+                <div class="stat-label">Net Out</div>
+                <div class="stat-value">${data.net_out} <span style="font-size:14px;font-weight:500;color:var(--text-secondary)">Mbps</span></div>
+            </div>
+            <div class="net-bar-combined">
+                <div class="net-bar-row">
+                    <span class="nb-label">In</span>
+                    <div class="nb-track"><div class="nb-fill" style="width:${inPct}%;background:var(--bar-net-in)"></div></div>
+                </div>
+                <div class="net-bar-row">
+                    <span class="nb-label">Out</span>
+                    <div class="nb-track"><div class="nb-fill" style="width:${outPct}%;background:var(--bar-net-out)"></div></div>
+                </div>
+            </div>`;
 
         // Uptime percentage
         document.getElementById('d-uptime-pct').textContent = data.uptime_pct + '%';
