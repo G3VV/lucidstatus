@@ -1,0 +1,100 @@
+/* ── Admin Styles ─────────────────────────────────────────────────────────── */
+body.admin-body { background: #0f1923; }
+
+.admin-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+.admin-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 2rem;
+}
+.admin-header h1 { font-size: 1.5rem; color: #e6edf3; }
+.admin-header a { font-size: .85rem; }
+
+/* ── Panels ──────────────────────────────────────────────────────────────── */
+.panel {
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.panel h2 { font-size: 1rem; color: #e6edf3; margin-bottom: 1rem; }
+.panel h3 { font-size: .85rem; color: #8b949e; margin: 1rem 0 .5rem; }
+
+/* ── Form ────────────────────────────────────────────────────────────────── */
+.form-row { display: flex; gap: .75rem; align-items: flex-end; margin-bottom: .75rem; flex-wrap: wrap; }
+.form-group { display: flex; flex-direction: column; gap: .25rem; flex: 1; min-width: 150px; }
+.form-group label { font-size: .75rem; color: #8b949e; text-transform: uppercase; letter-spacing: .05em; }
+
+input[type="text"], input[type="password"], input[type="number"], input[type="file"], select {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 6px; padding: .5rem .75rem;
+    color: #e6edf3; font-size: .85rem;
+    outline: none; transition: border-color .2s;
+}
+input:focus, select:focus { border-color: #2196f3; }
+
+.btn {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .5rem 1rem; border-radius: 6px;
+    font-size: .85rem; font-weight: 500;
+    cursor: pointer; border: none; transition: all .2s;
+    white-space: nowrap;
+}
+.btn-primary { background: #2196f3; color: #fff; }
+.btn-primary:hover { background: #1976d2; }
+.btn-danger  { background: rgba(239,68,68,.15); color: #ef4444; border: 1px solid rgba(239,68,68,.2); }
+.btn-danger:hover { background: rgba(239,68,68,.25); }
+.btn-sm { padding: .35rem .6rem; font-size: .75rem; }
+
+/* ── Table ───────────────────────────────────────────────────────────────── */
+.tbl { width: 100%; border-collapse: collapse; margin-top: .5rem; }
+.tbl th { font-size: .7rem; text-transform: uppercase; color: #8b949e; text-align: left; padding: .5rem; letter-spacing: .05em; }
+.tbl td { padding: .5rem; font-size: .85rem; color: #c9d1d9; border-top: 1px solid rgba(255,255,255,.05); }
+.tbl tr:hover td { background: rgba(255,255,255,.02); }
+
+/* ── Modal ───────────────────────────────────────────────────────────────── */
+.modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.6);
+    display: none; align-items: center; justify-content: center;
+    z-index: 1000;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+    background: #161b22; border: 1px solid rgba(255,255,255,.08);
+    border-radius: 12px; padding: 1.5rem; width: 90%; max-width: 550px;
+    max-height: 80vh; overflow-y: auto;
+}
+.modal h2 { margin-bottom: 1rem; color: #e6edf3; font-size: 1.1rem; }
+.modal-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: 1rem; }
+
+/* ── Script box ──────────────────────────────────────────────────────────── */
+.script-box {
+    background: #0d1117; border: 1px solid rgba(255,255,255,.08);
+    border-radius: 8px; padding: 1rem;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: .75rem; color: #7ee787;
+    white-space: pre-wrap; word-break: break-all;
+    max-height: 300px; overflow-y: auto;
+    position: relative; margin-top: .5rem;
+}
+.copy-btn {
+    position: absolute; top: .5rem; right: .5rem;
+    background: rgba(255,255,255,.1); border: none;
+    color: #8b949e; padding: .3rem .5rem; border-radius: 4px;
+    cursor: pointer; font-size: .7rem;
+}
+.copy-btn:hover { background: rgba(255,255,255,.15); color: #e6edf3; }
+
+/* ── Logo Preview ────────────────────────────────────────────────────────── */
+.logo-preview { height: 48px; margin: .5rem 0; }
+
+/* ── Login ───────────────────────────────────────────────────────────────── */
+.login-wrap {
+    max-width: 380px; margin: 10vh auto; padding: 2rem;
+}
+.login-wrap h1 { text-align: center; margin-bottom: 1.5rem; color: #e6edf3; font-size: 1.3rem; }
+.login-wrap .form-group { margin-bottom: 1rem; }
+.login-wrap .btn { width: 100%; justify-content: center; }
+.login-error { color: #ef4444; font-size: .85rem; text-align: center; margin-bottom: 1rem; }

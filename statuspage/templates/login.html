@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body class="admin-body">
+    <div class="login-wrap panel">
+        <h1>Admin Login</h1>
+        {% if error %}
+        <div class="login-error">{{ error }}</div>
+        {% endif %}
+        <form method="POST">
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" autofocus required>
+            </div>
+            <button class="btn btn-primary" type="submit">Sign In</button>
+        </form>
+    </div>
+</body>
+</html>
