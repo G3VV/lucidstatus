@@ -157,6 +157,16 @@ def server_to_dict(server):
 def index():
     return render_template('index.html')
 
+@app.route('/agent/<api_key>')
+def serve_agent_script(api_key):
+    """Serve the bash agent script for a given API key."""
+    server = Server.query.filter_by(api_key=api_key).first()
+    if not server:
+        return 'echo "Error: Invalid API key"', 404, {'Content-Type': 'text/plain'}
+    base_url = request.host_url.rstrip('/')
+    script = generate_bash_script(base_url, api_key)
+    return script, 200, {'Content-Type': 'text/plain'}
+
 @app.route('/api/status')
 def api_status():
     settings = get_settings()
