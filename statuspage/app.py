@@ -508,8 +508,8 @@ def generate_bash_script(base_url, api_key):
 
 set -e
 
-AGENT_PATH="/opt/statuspage-agent.sh"
-SERVICE_NAME="statuspage-agent"
+AGENT_PATH="/opt/lucidstatus-agent.sh"
+SERVICE_NAME="lucidstatus"
 
 cat > "$AGENT_PATH" << 'AGENT'
 #!/usr/bin/env bash
