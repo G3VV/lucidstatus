@@ -264,7 +264,8 @@ def send_discord_webhook(server_name, event='down'):
         def _send(u=url, p=payload):
             try:
                 req = Request(u, data=p.encode('utf-8'),
-                              headers={'Content-Type': 'application/json'})
+                              headers={'Content-Type': 'application/json',
+                                       'User-Agent': 'LucidStatus/1.0'})
                 urlopen(req, timeout=10)
             except (URLError, Exception) as e:
                 print(f'[Webhook] Failed to send to {u}: {e}')
@@ -701,10 +702,12 @@ def admin_webhook_test(wh_id):
     payload = _build_webhook_payload(wh.webhook_type, 'Test Server', 'down')
     try:
         req = Request(url, data=payload.encode('utf-8'),
-                      headers={'Content-Type': 'application/json'})
+                      headers={'Content-Type': 'application/json',
+                               'User-Agent': 'LucidStatus/1.0'})
         urlopen(req, timeout=10)
         return jsonify({'ok': True})
     except Exception as e:
+        app.logger.error('Webhook test failed for %s: %s', url, e)
         return jsonify({'ok': False, 'error': str(e)}), 502
 
 # ── Background Server Monitor ────────────────────────────────────────────────
