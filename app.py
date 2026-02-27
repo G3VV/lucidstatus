@@ -156,6 +156,8 @@ def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get('admin'):
+            if request.path.startswith('/admin/api/'):
+                return jsonify({'ok': False, 'error': 'Not authenticated'}), 401
             return redirect(url_for('admin_login'))
         return f(*args, **kwargs)
     return decorated

@@ -140,6 +140,8 @@
 }
 .item-info {
     flex: 1;
+    min-width: 0;
+    overflow: hidden;
 }
 .item-name {
     font-size: 15px;
@@ -150,11 +152,15 @@
 .item-sub {
     font-size: 12px;
     color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .item-actions {
     display: flex;
     gap: 8px;
     align-items: center;
+    flex-shrink: 0;
 }
 
 /* ── Modal ─────────────────────────────────────────────────────────────────── */

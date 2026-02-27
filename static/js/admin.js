@@ -24,6 +24,10 @@
             opts.body = JSON.stringify(opts.body);
         }
         const res = await fetch(url, opts);
+        if (res.status === 401) {
+            window.location.href = '/admin';
+            throw new Error('Session expired');
+        }
         return res.json();
     }
 
@@ -432,7 +436,7 @@
     };
 
     window.testWebhook = async function (id) {
-        const result = await api(`/admin/api/webhooks/${id}/test`, { method: 'POST' });
+        const result = await api(`/admin/api/webhooks/${id}/test`, { method: 'POST', body: {} });
         if (result.ok) {
             alert('Test notification sent successfully!');
         } else {
