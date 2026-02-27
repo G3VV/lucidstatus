@@ -147,10 +147,18 @@
             renderLogo(data);
             renderBanner(data);
             renderCategories(data.categories);
+            renderFooter(data.version);
             document.title = data.site_name + ' — Status';
         } catch (e) {
             console.error('Poll failed:', e);
         }
+    }
+
+    function renderFooter(version) {
+        const el = document.getElementById('footer');
+        if (!el) return;
+        const v = version ? ` v${escHtml(version)}` : '';
+        el.innerHTML = `Powered by <a href="https://github.com/G3VV/lucidstatus" target="_blank" rel="noopener">LucidStatus</a>${v}`;
     }
 
     function escHtml(str) {

@@ -291,6 +291,26 @@ main {
 .uptime-dot.partial { background: var(--dot-partial); }
 .uptime-dot.grey, .uptime-dot.none { background: var(--dot-grey); }
 
+/* ── Footer ────────────────────────────────────────────────────────────────── */
+.powered-footer {
+    max-width: 880px;
+    margin: 32px auto 24px;
+    padding: 0 24px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-secondary);
+    opacity: 0.6;
+}
+.powered-footer a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 600;
+}
+.powered-footer a:hover {
+    color: var(--text-primary);
+    text-decoration: underline;
+}
+
 /* ── Scrollbar ────────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: var(--bg-outer); }

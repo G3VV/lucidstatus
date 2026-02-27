@@ -17,6 +17,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import subprocess
+def _get_version():
+    """Read short commit hash as version."""
+    try:
+        return subprocess.check_output(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            stderr=subprocess.DEVNULL, text=True
+        ).strip() or 'dev'
+    except Exception:
+        return 'dev'
+
+APP_VERSION = _get_version()
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///statuspage.db'
@@ -368,6 +381,7 @@ def api_status():
         'status_label': STATUS_LABELS[status_key],
         'status_color': get_status_color(status_key, theme),
         'theme': theme_to_dict(theme),
+        'version': APP_VERSION,
         'categories': [],
     }
     for cat in categories:
