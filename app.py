@@ -95,6 +95,7 @@ class UptimeRecord(db.Model):
     server_id = db.Column(db.Integer, db.ForeignKey('server.id'), nullable=False)
     date = db.Column(db.Date, nullable=False)
     status = db.Column(db.String(20), default='up')
+    downtime_minutes = db.Column(db.Float, default=0)   # accumulated downtime in minutes for this day
     __table_args__ = (db.UniqueConstraint('server_id', 'date'),)
 
 class StatSnapshot(db.Model):
@@ -174,16 +175,45 @@ STATUS_LABELS = {
     'major_outage': 'Major system outage',
 }
 
+def _dot_status(downtime_min):
+    """Determine dot colour from accumulated downtime minutes.
+    >10 min → down (red), >0 min → partial (yellow), else up (green)."""
+    if downtime_min > 10:
+        return 'down'
+    elif downtime_min > 0:
+        return 'partial'
+    return 'up'
+
 def get_uptime_dots(server, num_days=30):
     today = utcnow().date()
-    records = {r.date: r.status for r in UptimeRecord.query.filter_by(server_id=server.id).all()}
+    records = {r.date: r for r in UptimeRecord.query.filter_by(server_id=server.id).all()}
     dots = []
+    now = utcnow()
     for i in range(num_days - 1, -1, -1):
         d = today - timedelta(days=i)
         if d in records:
-            dots.append(records[d])
+            rec = records[d]
+            # For today, also account for ongoing downtime if server is currently offline
+            if d == today and server.last_seen is not None:
+                gap = (now - server.last_seen).total_seconds() / 60.0
+                effective = rec.downtime_minutes + max(0, gap - 2)  # 2-min grace period
+            else:
+                effective = rec.downtime_minutes
+            dots.append(_dot_status(effective))
         elif d < server.created_at.date():
             dots.append('none')
+        elif d == today:
+            # No record yet today — check if server has ever reported
+            if server.last_seen is not None:
+                gap = (now - server.last_seen).total_seconds() / 60.0
+                if gap > 12:   # >10 min down + 2 min grace
+                    dots.append('down')
+                elif gap > 2:
+                    dots.append('partial')
+                else:
+                    dots.append('up')
+            else:
+                dots.append('grey')
         else:
             dots.append('grey')
     return dots
@@ -325,6 +355,7 @@ def agent_report():
     server.net_in_mbps = max(0, float(data.get('net_in', 0)))
     server.net_out_mbps = max(0, float(data.get('net_out', 0)))
     now = utcnow()
+    old_last_seen = server.last_seen  # capture before updating
     server.last_seen = now
 
     # Save snapshot (throttle to one per minute)
@@ -340,22 +371,28 @@ def agent_report():
         )
         db.session.add(snap)
 
+    # ── Uptime tracking based on gap since last report ──
     today = now.date()
     rec = UptimeRecord.query.filter_by(server_id=server.id, date=today).first()
     if not rec:
-        rec = UptimeRecord(server_id=server.id, date=today, status='up')
+        rec = UptimeRecord(server_id=server.id, date=today, status='up', downtime_minutes=0)
         db.session.add(rec)
-    else:
-        if rec.status == 'down':
-            rec.status = 'partial'
-        elif rec.status != 'partial':
-            rec.status = 'up'
+
+    # If there was a previous report, check the gap
+    if old_last_seen is not None:
+        gap_min = (now - old_last_seen).total_seconds() / 60.0
+        if gap_min > 2:  # more than 2 minutes = downtime (agent reports every 30s)
+            rec.downtime_minutes = (rec.downtime_minutes or 0) + gap_min
+
+    # Derive status from accumulated downtime
+    rec.status = _dot_status(rec.downtime_minutes or 0)
 
     db.session.commit()
     return jsonify({'ok': True})
 
 @app.route('/api/report/down', methods=['POST'])
 def report_down():
+    """Manual endpoint kept for backwards compat — adds 10+ min downtime so dot turns red."""
     api_key = request.headers.get('X-API-Key')
     if not api_key:
         return jsonify({'error': 'Missing API key'}), 401
@@ -365,13 +402,11 @@ def report_down():
     today = utcnow().date()
     rec = UptimeRecord.query.filter_by(server_id=server.id, date=today).first()
     if not rec:
-        rec = UptimeRecord(server_id=server.id, date=today, status='down')
+        rec = UptimeRecord(server_id=server.id, date=today, status='down', downtime_minutes=11)
         db.session.add(rec)
     else:
-        if rec.status == 'up':
-            rec.status = 'partial'
-        else:
-            rec.status = 'down'
+        rec.downtime_minutes = (rec.downtime_minutes or 0) + 11
+        rec.status = _dot_status(rec.downtime_minutes)
     db.session.commit()
     return jsonify({'ok': True})
 
@@ -612,6 +647,7 @@ def _migrate_add_columns():
         ('stat_snapshot', 'swap', 'FLOAT', 0),
         ('stat_snapshot', 'buffered', 'FLOAT', 0),
         ('stat_snapshot', 'cached', 'FLOAT', 0),
+        ('uptime_record', 'downtime_minutes', 'FLOAT', 0),
     ]
     for table, col, dtype, default in migrations:
         try:
