@@ -2,8 +2,11 @@ import os
 import secrets
 import uuid
 import json
+import threading
 from datetime import datetime, timedelta, timezone
 from functools import wraps
+from urllib.request import Request, urlopen
+from urllib.error import URLError
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, send_from_directory, Response
 from flask_sqlalchemy import SQLAlchemy
@@ -35,6 +38,7 @@ class Settings(db.Model):
     site_name = db.Column(db.String(100), default='lucid.cool')
     logo_path = db.Column(db.String(255), default='')
     admin_password_hash = db.Column(db.String(255))
+    discord_webhook_url = db.Column(db.String(500), default='')
 
 class ThemeSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -87,6 +91,7 @@ class Server(db.Model):
     net_max_mbps = db.Column(db.Float, default=1000)
     last_seen = db.Column(db.DateTime, default=None)
     created_at = db.Column(db.DateTime, default=utcnow)
+    webhook_notified = db.Column(db.Boolean, default=False)  # True if 'down' webhook already sent
     uptime_records = db.relationship('UptimeRecord', backref='server', lazy=True, cascade='all, delete-orphan')
     stat_snapshots = db.relationship('StatSnapshot', backref='server', lazy=True, cascade='all, delete-orphan')
 
@@ -218,6 +223,44 @@ def get_uptime_dots(server, num_days=30):
             dots.append('grey')
     return dots
 
+def send_discord_webhook(server_name, event='down'):
+    """Send a Discord webhook notification in a background thread."""
+    try:
+        settings = get_settings()
+        url = (settings.discord_webhook_url or '').strip()
+        if not url:
+            return
+    except Exception:
+        return
+
+    if event == 'down':
+        color = 0xFF5D5D  # red
+        title = f'\u26a0\ufe0f  {server_name} is DOWN'
+        desc = f'**{server_name}** has stopped reporting and appears to be offline.'
+    else:
+        color = 0x83FF78  # green
+        title = f'\u2705  {server_name} is back ONLINE'
+        desc = f'**{server_name}** is reporting again.'
+
+    payload = json.dumps({
+        'embeds': [{
+            'title': title,
+            'description': desc,
+            'color': color,
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+        }]
+    })
+
+    def _send():
+        try:
+            req = Request(url, data=payload.encode('utf-8'),
+                          headers={'Content-Type': 'application/json'})
+            urlopen(req, timeout=10)
+        except (URLError, Exception) as e:
+            print(f'[Webhook] Failed to send Discord notification: {e}')
+
+    threading.Thread(target=_send, daemon=True).start()
+
 def server_to_dict(server):
     now = utcnow()
     online = server.last_seen is not None and (now - server.last_seen).total_seconds() < 120
@@ -226,7 +269,12 @@ def server_to_dict(server):
         'name': server.name,
         'category_id': server.category_id,
         'cpu': round(server.cpu_percent, 1),
+        'iowait': round(server.cpu_iowait, 1),
+        'steal': round(server.cpu_steal, 1),
         'ram': round(server.ram_percent, 1),
+        'swap': round(server.swap_percent, 1),
+        'buffered': round(server.ram_buffered, 1),
+        'cached': round(server.ram_cached, 1),
         'disk': round(server.disk_percent, 1),
         'net_in': round(server.net_in_mbps, 2),
         'net_out': round(server.net_out_mbps, 2),
@@ -261,6 +309,18 @@ def api_status():
     theme = get_theme()
     status_key = compute_overall_status()
     categories = Category.query.order_by(Category.sort_order).all()
+
+    # Check for servers that went offline and send Discord webhook
+    now = utcnow()
+    for srv in Server.query.all():
+        is_offline = srv.last_seen is None or (now - srv.last_seen).total_seconds() > 120
+        if is_offline and not srv.webhook_notified:
+            srv.webhook_notified = True
+            send_discord_webhook(srv.name, 'down')
+        elif not is_offline and srv.webhook_notified:
+            srv.webhook_notified = False
+    db.session.commit()
+
     data = {
         'site_name': settings.site_name,
         'logo': settings.logo_path if settings.logo_path else None,
@@ -357,6 +417,7 @@ def agent_report():
     now = utcnow()
     old_last_seen = server.last_seen  # capture before updating
     server.last_seen = now
+    server.webhook_notified = False  # server is alive, clear notification flag
 
     # Save snapshot (throttle to one per minute)
     last_snap = StatSnapshot.query.filter_by(server_id=server.id).order_by(StatSnapshot.ts.desc()).first()
@@ -379,15 +440,22 @@ def agent_report():
         db.session.add(rec)
 
     # If there was a previous report, check the gap
+    was_offline = False
     if old_last_seen is not None:
         gap_min = (now - old_last_seen).total_seconds() / 60.0
         if gap_min > 2:  # more than 2 minutes = downtime (agent reports every 30s)
             rec.downtime_minutes = (rec.downtime_minutes or 0) + gap_min
+            was_offline = True
 
     # Derive status from accumulated downtime
     rec.status = _dot_status(rec.downtime_minutes or 0)
 
     db.session.commit()
+
+    # Send Discord webhook if server was offline and just came back
+    if was_offline:
+        send_discord_webhook(server.name, 'recovery')
+
     return jsonify({'ok': True})
 
 @app.route('/api/report/down', methods=['POST'])
@@ -451,9 +519,10 @@ def admin_settings():
         new_pw = request.form.get('new_password', '').strip()
         if new_pw:
             s.admin_password_hash = generate_password_hash(new_pw)
+        s.discord_webhook_url = request.form.get('discord_webhook_url', s.discord_webhook_url or '')
         db.session.commit()
         return jsonify({'ok': True, 'logo': s.logo_path, 'site_name': s.site_name})
-    return jsonify({'site_name': s.site_name, 'logo': s.logo_path})
+    return jsonify({'site_name': s.site_name, 'logo': s.logo_path, 'discord_webhook_url': s.discord_webhook_url or ''})
 
 @app.route('/admin/api/theme', methods=['GET', 'POST'])
 @login_required
@@ -648,6 +717,8 @@ def _migrate_add_columns():
         ('stat_snapshot', 'buffered', 'FLOAT', 0),
         ('stat_snapshot', 'cached', 'FLOAT', 0),
         ('uptime_record', 'downtime_minutes', 'FLOAT', 0),
+        ('settings', 'discord_webhook_url', 'VARCHAR(500)', "''"),
+        ('server', 'webhook_notified', 'BOOLEAN', 0),
     ]
     for table, col, dtype, default in migrations:
         try:

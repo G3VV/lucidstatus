@@ -93,6 +93,11 @@
                 <label>Logo<input type="file" id="set-logo" accept="image/*"></label>
                 <div id="set-logo-preview" class="logo-preview"></div>
                 <label>New Admin Password<input type="password" id="set-password" placeholder="Leave blank to keep current"></label>
+                <hr style="border:none;border-top:1px solid var(--bg-bar);margin:16px 0;">
+                <label>Discord Webhook URL
+                    <input type="url" id="set-discord-webhook" placeholder="https://discord.com/api/webhooks/...">
+                </label>
+                <p style="font-size:12px;color:var(--text-secondary);margin:-8px 0 12px;">Sends a notification to Discord when a server goes offline or comes back online.</p>
                 <button type="submit" class="btn-primary">Save Settings</button>
             </form>
         </div>

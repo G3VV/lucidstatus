@@ -222,6 +222,7 @@
     async function loadSettings() {
         const s = await api('/admin/api/settings');
         document.getElementById('set-sitename').value = s.site_name || '';
+        document.getElementById('set-discord-webhook').value = s.discord_webhook_url || '';
         if (s.logo) {
             document.getElementById('set-logo-preview').innerHTML = `<img src="${s.logo}">`;
         }
@@ -231,6 +232,7 @@
         e.preventDefault();
         const fd = new FormData();
         fd.append('site_name', document.getElementById('set-sitename').value);
+        fd.append('discord_webhook_url', document.getElementById('set-discord-webhook').value);
         const pw = document.getElementById('set-password').value;
         if (pw) fd.append('new_password', pw);
         const logo = document.getElementById('set-logo').files[0];

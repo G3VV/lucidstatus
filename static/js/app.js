@@ -2,6 +2,22 @@
 (function () {
     const API = '/api/status';
     const POLL_INTERVAL = 10000;
+    let advancedMode = localStorage.getItem('adv_mode') === '1';
+
+    function initAdvToggle() {
+        const btn = document.getElementById('adv-toggle');
+        if (!btn) return;
+        if (advancedMode) btn.classList.add('active');
+        btn.addEventListener('click', () => {
+            advancedMode = !advancedMode;
+            btn.classList.toggle('active', advancedMode);
+            localStorage.setItem('adv_mode', advancedMode ? '1' : '0');
+            // Re-render with current data
+            if (lastData) renderCategories(lastData.categories);
+        });
+    }
+
+    let lastData = null;
 
     function applyTheme(theme) {
         const root = document.documentElement;
@@ -92,6 +108,19 @@
                     dots += `<div class="uptime-dot ${d}"></div>`;
                 }
 
+                let advHtml = '';
+                if (advancedMode) {
+                    const lastSeen = srv.last_seen ? new Date(srv.last_seen).toLocaleString() : 'Never';
+                    advHtml = `<div class="adv-row">
+                        <div class="adv-item"><span class="adv-label">IOWait</span><span class="adv-value">${srv.iowait}%</span></div>
+                        <div class="adv-item"><span class="adv-label">Steal</span><span class="adv-value">${srv.steal}%</span></div>
+                        <div class="adv-item"><span class="adv-label">Swap</span><span class="adv-value">${srv.swap}%</span></div>
+                        <div class="adv-item"><span class="adv-label">Buffered</span><span class="adv-value">${srv.buffered}%</span></div>
+                        <div class="adv-item"><span class="adv-label">Cached</span><span class="adv-value">${srv.cached}%</span></div>
+                        <div class="adv-item"><span class="adv-label">Last Seen</span><span class="adv-value">${escHtml(lastSeen)}</span></div>
+                    </div>`;
+                }
+
                 html += `<div class="server-card" onclick="location.href='/server/${srv.id}'">
                     <div class="server-top">
                         <div class="server-name-area">
@@ -101,6 +130,7 @@
                         <div class="uptime-row">${dots}</div>
                     </div>
                     <div class="bars-row">${bars}</div>
+                    ${advHtml}
                 </div>`;
             }
             html += '</div>';
@@ -112,6 +142,7 @@
         try {
             const res = await fetch(API);
             const data = await res.json();
+            lastData = data;
             if (data.theme) applyTheme(data.theme);
             renderLogo(data);
             renderBanner(data);
@@ -128,6 +159,7 @@
         return d.innerHTML;
     }
 
+    initAdvToggle();
     poll();
     setInterval(poll, POLL_INTERVAL);
 })();

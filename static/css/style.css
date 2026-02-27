@@ -49,6 +49,7 @@ body {
     padding: 0 24px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
 }
 .logo-area {
     display: flex;
@@ -64,6 +65,49 @@ body {
     font-weight: 700;
     color: var(--accent);
     text-shadow: 0 0 20px var(--accent-shadow);
+}
+
+/* ── Advanced View Toggle ─────────────────────────────────────────────────── */
+.adv-toggle {
+    background: var(--bg-bar);
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    font-family: inherit;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all .15s;
+    letter-spacing: .3px;
+}
+.adv-toggle:hover { background: var(--bg-card); color: var(--text-primary); }
+.adv-toggle.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ── Advanced info row ────────────────────────────────────────────────────── */
+.adv-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+.adv-item {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+.adv-item .adv-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: .3px;
+}
+.adv-item .adv-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
 /* ── Status Banner ────────────────────────────────────────────────────────── */
