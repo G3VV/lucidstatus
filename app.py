@@ -278,17 +278,17 @@ def _build_webhook_payload(webhook_type, server_name, event):
     ts = datetime.now(timezone.utc).isoformat()
 
     if event == 'down':
-        title = f'\u26a0\ufe0f  {server_name} is DOWN'
+        title = f'{server_name} is DOWN'
         desc = f'**{server_name}** has stopped reporting and appears to be offline.'
         color = 0xFF5D5D
         level = 'critical'
     elif event == 'recovery':
-        title = f'\u2705  {server_name} is back ONLINE'
+        title = f'{server_name} is back ONLINE'
         desc = f'**{server_name}** is reporting again.'
         color = 0x83FF78
         level = 'info'
     elif event == 'degraded':
-        title = f'\u26a0\ufe0f  {server_name} is degraded'
+        title = f'{server_name} is degraded'
         desc = f'**{server_name}** is experiencing delays.'
         color = 0xFFD95D
         level = 'warning'
@@ -300,9 +300,8 @@ def _build_webhook_payload(webhook_type, server_name, event):
             'embeds': [{'title': title, 'description': desc, 'color': color, 'timestamp': ts}]
         })
     elif webhook_type == 'slack':
-        emoji = ':red_circle:' if event == 'down' else ':large_green_circle:' if event == 'recovery' else ':warning:'
         return json.dumps({
-            'text': f'{emoji} *{title}*\n{desc}'
+            'text': f'*{title}*\n{desc}'
         })
     else:  # custom — generic JSON
         return json.dumps({
