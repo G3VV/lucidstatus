@@ -22,6 +22,7 @@
         <nav class="admin-tabs">
             <button class="tab-btn active" data-tab="servers">Servers</button>
             <button class="tab-btn" data-tab="categories">Categories</button>
+            <button class="tab-btn" data-tab="webhooks">Webhooks</button>
             <button class="tab-btn" data-tab="settings">Settings</button>
             <button class="tab-btn" data-tab="theme">Theme</button>
         </nav>
@@ -93,13 +94,46 @@
                 <label>Logo<input type="file" id="set-logo" accept="image/*"></label>
                 <div id="set-logo-preview" class="logo-preview"></div>
                 <label>New Admin Password<input type="password" id="set-password" placeholder="Leave blank to keep current"></label>
-                <hr style="border:none;border-top:1px solid var(--bg-bar);margin:16px 0;">
-                <label>Discord Webhook URL
-                    <input type="url" id="set-discord-webhook" placeholder="https://discord.com/api/webhooks/...">
-                </label>
-                <p style="font-size:12px;color:var(--text-secondary);margin:-8px 0 12px;">Sends a notification to Discord when a server goes offline or comes back online.</p>
                 <button type="submit" class="btn-primary">Save Settings</button>
             </form>
+        </div>
+
+        <!-- Webhooks Tab -->
+        <div class="tab-panel" id="tab-webhooks">
+            <div class="panel-header">
+                <h2>Webhooks</h2>
+                <button class="btn-primary" id="btn-add-webhook">+ Add Webhook</button>
+            </div>
+            <p style="font-size:13px;color:var(--text-secondary);margin:-12px 0 20px;">
+                Configure webhook endpoints to receive notifications when servers go down, recover, or degrade.
+            </p>
+            <div id="webhooks-list" class="items-list"></div>
+
+            <!-- Add/Edit webhook modal -->
+            <div class="modal-overlay" id="webhook-modal" style="display:none;">
+                <div class="modal">
+                    <h3 id="webhook-modal-title">Add Webhook</h3>
+                    <label>Name<input type="text" id="wh-name" placeholder="e.g. Discord Alerts"></label>
+                    <label>Webhook URL<input type="text" id="wh-url" placeholder="https://discord.com/api/webhooks/..."></label>
+                    <label>Type
+                        <select id="wh-type">
+                            <option value="discord">Discord</option>
+                            <option value="slack">Slack</option>
+                            <option value="custom">Custom (JSON POST)</option>
+                        </select>
+                    </label>
+                    <div class="wh-checks">
+                        <label class="wh-check"><input type="checkbox" id="wh-enabled" checked> Enabled</label>
+                        <label class="wh-check"><input type="checkbox" id="wh-notify-down" checked> Notify on Down</label>
+                        <label class="wh-check"><input type="checkbox" id="wh-notify-recovery" checked> Notify on Recovery</label>
+                        <label class="wh-check"><input type="checkbox" id="wh-notify-degraded"> Notify on Degraded</label>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn-secondary" id="wh-cancel">Cancel</button>
+                        <button class="btn-primary" id="wh-save">Save</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Theme Tab -->

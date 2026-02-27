@@ -209,6 +209,20 @@
     font-family: inherit;
 }
 .modal input:focus, .modal select:focus { border-color: var(--accent); }
+.modal input[type="url"] {
+    display: block;
+    width: 100%;
+    margin-top: 6px;
+    padding: 10px 12px;
+    background: var(--bg-card);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 14px;
+    outline: none;
+    font-family: inherit;
+}
+.modal input[type="url"]:focus { border-color: var(--accent); }
 .modal-actions {
     display: flex;
     justify-content: flex-end;
@@ -312,4 +326,29 @@
     color: var(--text-primary);
     font-size: 12px;
     font-family: 'SF Mono', monospace;
+}
+
+/* ── Webhook UI ───────────────────────────────────────────────────────────── */
+.wh-checks {
+    display: flex; flex-wrap: wrap; gap: 10px 18px; margin: 14px 0 6px;
+}
+.wh-check {
+    display: flex !important; align-items: center; gap: 6px;
+    font-size: 12px !important; color: var(--text-primary) !important;
+    cursor: pointer; margin-bottom: 0 !important;
+}
+.wh-check input[type="checkbox"] {
+    width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer;
+}
+.wh-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600; letter-spacing: .3px;
+}
+.wh-badge.discord { background: #5865F2; color: #fff; }
+.wh-badge.slack { background: #4A154B; color: #fff; }
+.wh-badge.custom { background: var(--bg-bar); color: var(--text-secondary); }
+.wh-badge.enabled { background: rgba(131,255,120,.12); color: #83FF78; }
+.wh-badge.disabled { background: rgba(255,93,93,.12); color: #FF5D5D; }
+.wh-events {
+    font-size: 11px; color: var(--text-secondary); margin-top: 2px;
 }

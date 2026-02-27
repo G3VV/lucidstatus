@@ -222,7 +222,6 @@
     async function loadSettings() {
         const s = await api('/admin/api/settings');
         document.getElementById('set-sitename').value = s.site_name || '';
-        document.getElementById('set-discord-webhook').value = s.discord_webhook_url || '';
         if (s.logo) {
             document.getElementById('set-logo-preview').innerHTML = `<img src="${s.logo}">`;
         }
@@ -232,7 +231,6 @@
         e.preventDefault();
         const fd = new FormData();
         fd.append('site_name', document.getElementById('set-sitename').value);
-        fd.append('discord_webhook_url', document.getElementById('set-discord-webhook').value);
         const pw = document.getElementById('set-password').value;
         if (pw) fd.append('new_password', pw);
         const logo = document.getElementById('set-logo').files[0];
@@ -330,6 +328,118 @@
         alert('Theme reset to defaults.');
     });
 
+    // ══════════════════════════════════════════════════════════════════════
+    //  WEBHOOKS TAB
+    // ══════════════════════════════════════════════════════════════════════
+    let webhooks = [];
+    let editingWebhookId = null;
+
+    async function loadWebhooks() {
+        webhooks = await api('/admin/api/webhooks');
+        renderWebhooks();
+    }
+
+    function renderWebhooks() {
+        const list = document.getElementById('webhooks-list');
+        if (!webhooks.length) {
+            list.innerHTML = '<p style="color:var(--text-secondary);padding:12px;">No webhooks configured yet.</p>';
+            return;
+        }
+        list.innerHTML = webhooks.map(w => {
+            const typeBadge = `<span class="wh-badge ${w.webhook_type}">${w.webhook_type}</span>`;
+            const statusBadge = w.enabled
+                ? '<span class="wh-badge enabled">Enabled</span>'
+                : '<span class="wh-badge disabled">Disabled</span>';
+            const events = [
+                w.notify_down ? 'Down' : '',
+                w.notify_recovery ? 'Recovery' : '',
+                w.notify_degraded ? 'Degraded' : '',
+            ].filter(Boolean).join(', ');
+            return `<div class="item-row">
+                <div class="item-info">
+                    <div class="item-name">${esc(w.name)} ${typeBadge} ${statusBadge}</div>
+                    <div class="item-sub">${esc(w.url)}</div>
+                    <div class="wh-events">Events: ${events || 'None'}</div>
+                </div>
+                <div class="item-actions">
+                    <button class="btn-secondary btn-small" onclick="testWebhook(${w.id})">Test</button>
+                    <button class="btn-secondary btn-small" onclick="editWebhook(${w.id})">Edit</button>
+                    <button class="btn-danger btn-small" onclick="deleteWebhook(${w.id})">Delete</button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    document.getElementById('btn-add-webhook').addEventListener('click', () => {
+        editingWebhookId = null;
+        document.getElementById('webhook-modal-title').textContent = 'Add Webhook';
+        document.getElementById('wh-name').value = '';
+        document.getElementById('wh-url').value = '';
+        document.getElementById('wh-type').value = 'discord';
+        document.getElementById('wh-enabled').checked = true;
+        document.getElementById('wh-notify-down').checked = true;
+        document.getElementById('wh-notify-recovery').checked = true;
+        document.getElementById('wh-notify-degraded').checked = false;
+        document.getElementById('webhook-modal').style.display = 'flex';
+    });
+
+    window.editWebhook = function (id) {
+        const w = webhooks.find(x => x.id === id);
+        if (!w) return;
+        editingWebhookId = id;
+        document.getElementById('webhook-modal-title').textContent = 'Edit Webhook';
+        document.getElementById('wh-name').value = w.name;
+        document.getElementById('wh-url').value = w.url;
+        document.getElementById('wh-type').value = w.webhook_type;
+        document.getElementById('wh-enabled').checked = w.enabled;
+        document.getElementById('wh-notify-down').checked = w.notify_down;
+        document.getElementById('wh-notify-recovery').checked = w.notify_recovery;
+        document.getElementById('wh-notify-degraded').checked = w.notify_degraded;
+        document.getElementById('webhook-modal').style.display = 'flex';
+    };
+
+    document.getElementById('wh-cancel').addEventListener('click', () => {
+        document.getElementById('webhook-modal').style.display = 'none';
+    });
+
+    document.getElementById('wh-save').addEventListener('click', async () => {
+        const name = document.getElementById('wh-name').value.trim();
+        const url = document.getElementById('wh-url').value.trim();
+        if (!name) return alert('Name is required');
+        if (!url) return alert('URL is required');
+        const body = {
+            name,
+            url,
+            webhook_type: document.getElementById('wh-type').value,
+            enabled: document.getElementById('wh-enabled').checked,
+            notify_down: document.getElementById('wh-notify-down').checked,
+            notify_recovery: document.getElementById('wh-notify-recovery').checked,
+            notify_degraded: document.getElementById('wh-notify-degraded').checked,
+        };
+        if (editingWebhookId) {
+            await api(`/admin/api/webhooks/${editingWebhookId}`, { method: 'PUT', body });
+        } else {
+            await api('/admin/api/webhooks', { method: 'POST', body });
+        }
+        document.getElementById('webhook-modal').style.display = 'none';
+        await loadWebhooks();
+    });
+
+    window.deleteWebhook = async function (id) {
+        if (!confirm('Delete this webhook?')) return;
+        await api(`/admin/api/webhooks/${id}`, { method: 'DELETE' });
+        await loadWebhooks();
+    };
+
+    window.testWebhook = async function (id) {
+        const result = await api(`/admin/api/webhooks/${id}/test`, { method: 'POST' });
+        if (result.ok) {
+            alert('Test notification sent successfully!');
+        } else {
+            alert('Failed to send: ' + (result.error || 'Unknown error'));
+        }
+    };
+
     // ── Helpers ────────────────────────────────────────────────────────────
     function esc(str) {
         const d = document.createElement('div');
@@ -350,6 +460,7 @@
         await loadServers();
         await loadSettings();
         await loadTheme();
+        await loadWebhooks();
         renderCategories();
     }
     init();

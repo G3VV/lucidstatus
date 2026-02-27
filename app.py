@@ -38,7 +38,7 @@ class Settings(db.Model):
     site_name = db.Column(db.String(100), default='lucid.cool')
     logo_path = db.Column(db.String(255), default='')
     admin_password_hash = db.Column(db.String(255))
-    discord_webhook_url = db.Column(db.String(500), default='')
+    discord_webhook_url = db.Column(db.String(500), default='')  # legacy, kept for migration compat
 
 class ThemeSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -94,6 +94,18 @@ class Server(db.Model):
     webhook_notified = db.Column(db.Boolean, default=False)  # True if 'down' webhook already sent
     uptime_records = db.relationship('UptimeRecord', backref='server', lazy=True, cascade='all, delete-orphan')
     stat_snapshots = db.relationship('StatSnapshot', backref='server', lazy=True, cascade='all, delete-orphan')
+
+class WebhookEndpoint(db.Model):
+    """Configurable webhook endpoints for notifications."""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, default='My Webhook')
+    url = db.Column(db.String(500), nullable=False)
+    webhook_type = db.Column(db.String(20), default='discord')  # discord, slack, custom
+    enabled = db.Column(db.Boolean, default=True)
+    notify_down = db.Column(db.Boolean, default=True)
+    notify_recovery = db.Column(db.Boolean, default=True)
+    notify_degraded = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=utcnow)
 
 class UptimeRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -224,42 +236,80 @@ def get_uptime_dots(server, num_days=30):
     return dots
 
 def send_discord_webhook(server_name, event='down'):
-    """Send a Discord webhook notification in a background thread."""
+    """Send webhook notifications to all matching enabled endpoints in background threads."""
     try:
-        settings = get_settings()
-        url = (settings.discord_webhook_url or '').strip()
-        if not url:
-            return
+        webhooks = WebhookEndpoint.query.filter_by(enabled=True).all()
     except Exception:
         return
 
+    for wh in webhooks:
+        # Check if this webhook wants this event type
+        if event == 'down' and not wh.notify_down:
+            continue
+        if event == 'recovery' and not wh.notify_recovery:
+            continue
+        if event == 'degraded' and not wh.notify_degraded:
+            continue
+
+        url = (wh.url or '').strip()
+        if not url:
+            continue
+
+        payload = _build_webhook_payload(wh.webhook_type, server_name, event)
+        if not payload:
+            continue
+
+        def _send(u=url, p=payload):
+            try:
+                req = Request(u, data=p.encode('utf-8'),
+                              headers={'Content-Type': 'application/json'})
+                urlopen(req, timeout=10)
+            except (URLError, Exception) as e:
+                print(f'[Webhook] Failed to send to {u}: {e}')
+
+        threading.Thread(target=_send, daemon=True).start()
+
+
+def _build_webhook_payload(webhook_type, server_name, event):
+    """Build JSON payload appropriate for the webhook type."""
+    ts = datetime.now(timezone.utc).isoformat()
+
     if event == 'down':
-        color = 0xFF5D5D  # red
         title = f'\u26a0\ufe0f  {server_name} is DOWN'
         desc = f'**{server_name}** has stopped reporting and appears to be offline.'
-    else:
-        color = 0x83FF78  # green
+        color = 0xFF5D5D
+        level = 'critical'
+    elif event == 'recovery':
         title = f'\u2705  {server_name} is back ONLINE'
         desc = f'**{server_name}** is reporting again.'
+        color = 0x83FF78
+        level = 'info'
+    elif event == 'degraded':
+        title = f'\u26a0\ufe0f  {server_name} is degraded'
+        desc = f'**{server_name}** is experiencing delays.'
+        color = 0xFFD95D
+        level = 'warning'
+    else:
+        return None
 
-    payload = json.dumps({
-        'embeds': [{
+    if webhook_type == 'discord':
+        return json.dumps({
+            'embeds': [{'title': title, 'description': desc, 'color': color, 'timestamp': ts}]
+        })
+    elif webhook_type == 'slack':
+        emoji = ':red_circle:' if event == 'down' else ':large_green_circle:' if event == 'recovery' else ':warning:'
+        return json.dumps({
+            'text': f'{emoji} *{title}*\n{desc}'
+        })
+    else:  # custom — generic JSON
+        return json.dumps({
+            'event': event,
+            'server': server_name,
             'title': title,
-            'description': desc,
-            'color': color,
-            'timestamp': datetime.now(timezone.utc).isoformat(),
-        }]
-    })
-
-    def _send():
-        try:
-            req = Request(url, data=payload.encode('utf-8'),
-                          headers={'Content-Type': 'application/json'})
-            urlopen(req, timeout=10)
-        except (URLError, Exception) as e:
-            print(f'[Webhook] Failed to send Discord notification: {e}')
-
-    threading.Thread(target=_send, daemon=True).start()
+            'message': desc,
+            'level': level,
+            'timestamp': ts,
+        })
 
 def server_to_dict(server):
     now = utcnow()
@@ -309,18 +359,6 @@ def api_status():
     theme = get_theme()
     status_key = compute_overall_status()
     categories = Category.query.order_by(Category.sort_order).all()
-
-    # Check for servers that went offline and send Discord webhook
-    now = utcnow()
-    for srv in Server.query.all():
-        is_offline = srv.last_seen is None or (now - srv.last_seen).total_seconds() > 120
-        if is_offline and not srv.webhook_notified:
-            srv.webhook_notified = True
-            send_discord_webhook(srv.name, 'down')
-        elif not is_offline and srv.webhook_notified:
-            srv.webhook_notified = False
-    db.session.commit()
-
     data = {
         'site_name': settings.site_name,
         'logo': settings.logo_path if settings.logo_path else None,
@@ -522,7 +560,7 @@ def admin_settings():
         s.discord_webhook_url = request.form.get('discord_webhook_url', s.discord_webhook_url or '')
         db.session.commit()
         return jsonify({'ok': True, 'logo': s.logo_path, 'site_name': s.site_name})
-    return jsonify({'site_name': s.site_name, 'logo': s.logo_path, 'discord_webhook_url': s.discord_webhook_url or ''})
+    return jsonify({'site_name': s.site_name, 'logo': s.logo_path})
 
 @app.route('/admin/api/theme', methods=['GET', 'POST'])
 @login_required
@@ -604,6 +642,94 @@ def admin_server_script(srv_id):
     srv = Server.query.get_or_404(srv_id)
     base_url = request.host_url.rstrip('/')
     return jsonify({'bash_script': generate_bash_script(base_url, srv.api_key)})
+
+# ── Webhook Admin API ────────────────────────────────────────────────────────
+
+@app.route('/admin/api/webhooks', methods=['GET', 'POST'])
+@login_required
+def admin_webhooks():
+    if request.method == 'POST':
+        data = request.json
+        wh = WebhookEndpoint(
+            name=data.get('name', 'My Webhook'),
+            url=data['url'],
+            webhook_type=data.get('webhook_type', 'discord'),
+            enabled=data.get('enabled', True),
+            notify_down=data.get('notify_down', True),
+            notify_recovery=data.get('notify_recovery', True),
+            notify_degraded=data.get('notify_degraded', False),
+        )
+        db.session.add(wh)
+        db.session.commit()
+        return jsonify({'id': wh.id, 'name': wh.name})
+    webhooks = WebhookEndpoint.query.order_by(WebhookEndpoint.created_at).all()
+    return jsonify([{
+        'id': w.id, 'name': w.name, 'url': w.url,
+        'webhook_type': w.webhook_type, 'enabled': w.enabled,
+        'notify_down': w.notify_down, 'notify_recovery': w.notify_recovery,
+        'notify_degraded': w.notify_degraded,
+    } for w in webhooks])
+
+@app.route('/admin/api/webhooks/<int:wh_id>', methods=['PUT', 'DELETE'])
+@login_required
+def admin_webhook_detail(wh_id):
+    wh = WebhookEndpoint.query.get_or_404(wh_id)
+    if request.method == 'DELETE':
+        db.session.delete(wh)
+        db.session.commit()
+        return jsonify({'ok': True})
+    data = request.json
+    wh.name = data.get('name', wh.name)
+    wh.url = data.get('url', wh.url)
+    wh.webhook_type = data.get('webhook_type', wh.webhook_type)
+    wh.enabled = data.get('enabled', wh.enabled)
+    wh.notify_down = data.get('notify_down', wh.notify_down)
+    wh.notify_recovery = data.get('notify_recovery', wh.notify_recovery)
+    wh.notify_degraded = data.get('notify_degraded', wh.notify_degraded)
+    db.session.commit()
+    return jsonify({'ok': True})
+
+@app.route('/admin/api/webhooks/<int:wh_id>/test', methods=['POST'])
+@login_required
+def admin_webhook_test(wh_id):
+    wh = WebhookEndpoint.query.get_or_404(wh_id)
+    url = (wh.url or '').strip()
+    if not url:
+        return jsonify({'ok': False, 'error': 'No URL configured'}), 400
+    payload = _build_webhook_payload(wh.webhook_type, 'Test Server', 'down')
+    try:
+        req = Request(url, data=payload.encode('utf-8'),
+                      headers={'Content-Type': 'application/json'})
+        urlopen(req, timeout=10)
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 502
+
+# ── Background Server Monitor ────────────────────────────────────────────────
+
+def _background_checker():
+    """Runs every 30s to detect offline servers and fire webhooks."""
+    import time
+    while True:
+        time.sleep(30)
+        try:
+            with app.app_context():
+                now = utcnow()
+                changed = False
+                for srv in Server.query.all():
+                    is_offline = srv.last_seen is None or (now - srv.last_seen).total_seconds() > 120
+                    if is_offline and not srv.webhook_notified:
+                        srv.webhook_notified = True
+                        changed = True
+                        send_discord_webhook(srv.name, 'down')
+                    elif not is_offline and srv.webhook_notified:
+                        srv.webhook_notified = False
+                        changed = True
+                if changed:
+                    db.session.commit()
+        except Exception as e:
+            print(f'[Monitor] Error: {e}')
+
 
 def generate_bash_script(base_url, api_key):
     return f'''#!/usr/bin/env bash
@@ -734,6 +860,11 @@ with app.app_context():
     db.create_all()
     get_settings()
     get_theme()
+
+# Start background monitor (only once, avoid double-start under Flask reloader)
+if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    _monitor_thread = threading.Thread(target=_background_checker, daemon=True)
+    _monitor_thread.start()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
