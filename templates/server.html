@@ -7,46 +7,66 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/recharts@2/umd/Recharts.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
     <style>
-        .detail-wrap{max-width:960px;margin:0 auto;padding:24px 20px;}
+        .detail-wrap{max-width:1120px;margin:0 auto;padding:28px 24px;}
         .back-link{color:var(--accent);text-decoration:none;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;}
         .back-link:hover{text-decoration:underline;}
-        .detail-header{display:flex;align-items:center;gap:16px;margin:20px 0 8px;}
-        .detail-header h1{font-size:26px;color:var(--text-primary);margin:0;font-weight:700;}
-        .detail-status{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+        .detail-header{display:flex;align-items:center;gap:16px;margin:24px 0 8px;}
+        .detail-header h1{font-size:28px;color:var(--text-primary);margin:0;font-weight:700;}
+        .detail-status{width:14px;height:14px;border-radius:50%;flex-shrink:0;}
         .detail-meta{color:var(--text-secondary);font-size:13px;margin-bottom:28px;}
         .detail-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px;}
-        .stat-card{background:var(--bg-card);border-radius:10px;padding:18px 20px;}
-        .stat-card .stat-label{font-size:12px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
-        .stat-card .stat-value{font-size:28px;font-weight:700;color:var(--text-primary);}
-        .stat-card .stat-bar-wrap{height:8px;background:var(--bg-bar);border-radius:4px;margin-top:10px;overflow:hidden;}
-        .stat-card .stat-bar-fill{height:100%;border-radius:4px;transition:width .4s;}
-        .net-card{background:var(--bg-card);border-radius:10px;padding:18px 20px;margin-bottom:28px;display:flex;align-items:center;gap:32px;}
+        .stat-card{background:var(--bg-card);border-radius:12px;padding:20px 22px;border:1px solid rgba(255,255,255,.05);}
+        .stat-card .stat-label{font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+        .stat-card .stat-value{font-size:30px;font-weight:700;color:var(--text-primary);}
+        .stat-card .stat-bar-wrap{height:6px;background:var(--bg-bar);border-radius:3px;margin-top:12px;overflow:hidden;}
+        .stat-card .stat-bar-fill{height:100%;border-radius:3px;transition:width .4s;}
+        .net-card{background:var(--bg-card);border-radius:12px;padding:20px 22px;margin-bottom:28px;display:flex;align-items:center;gap:32px;border:1px solid rgba(255,255,255,.05);}
         .net-card .net-half{flex:1;}
-        .net-card .stat-label{font-size:12px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
-        .net-card .stat-value{font-size:24px;font-weight:700;color:var(--text-primary);}
+        .net-card .stat-label{font-size:11px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;}
+        .net-card .stat-value{font-size:26px;font-weight:700;color:var(--text-primary);}
         .net-bar-combined{flex:2;display:flex;flex-direction:column;gap:6px;}
         .net-bar-row{display:flex;align-items:center;gap:10px;}
         .net-bar-row .nb-label{font-size:11px;color:var(--text-secondary);text-transform:uppercase;width:28px;text-align:right;letter-spacing:.3px;}
-        .net-bar-row .nb-track{flex:1;height:8px;background:var(--bg-bar);border-radius:4px;overflow:hidden;}
-        .net-bar-row .nb-fill{height:100%;border-radius:4px;transition:width .4s;}
+        .net-bar-row .nb-track{flex:1;height:6px;background:var(--bg-bar);border-radius:3px;overflow:hidden;}
+        .net-bar-row .nb-fill{height:100%;border-radius:3px;transition:width .4s;}
         @media(max-width:600px){.detail-stats{grid-template-columns:repeat(2,1fr);} .net-card{flex-direction:column;gap:14px;align-items:stretch;} .net-bar-combined{flex:none;}}
-        .chart-section{background:var(--bg-card);border-radius:12px;padding:22px 22px 14px;margin-bottom:16px;border:1px solid rgba(255,255,255,.06);}
-        .chart-section h3{color:var(--text-primary);font-size:15px;margin:0 0 12px;font-weight:600;display:flex;align-items:center;gap:8px;}
-        .chart-section h3 .chart-icon{font-size:16px;opacity:.55;}
-        .chart-controls{display:flex;gap:8px;margin-bottom:16px;}
-        .chart-controls button{background:var(--bg-bar);border:none;color:var(--text-secondary);padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;font-family:inherit;}
-        .chart-controls button.active{background:var(--accent);color:#fff;}
-        .chart-canvas-wrap{position:relative;height:200px;}
-        .uptime-section{background:var(--bg-card);border-radius:10px;padding:22px;margin-bottom:20px;}
-        .uptime-section h3{color:var(--text-primary);font-size:15px;margin:0;font-weight:600;}
+
+        /* ── Charts ── */
+        .chart-section{
+            background:var(--bg-card);
+            border-radius:14px;
+            padding:24px 24px 16px;
+            border:1px solid rgba(255,255,255,.06);
+            transition:border-color .2s;
+        }
+        .chart-section:hover{border-color:rgba(255,255,255,.1);}
+        .chart-section h3{
+            color:var(--text-primary);font-size:16px;margin:0 0 2px;font-weight:600;
+            display:flex;align-items:center;gap:9px;
+        }
+        .chart-section h3 .chart-icon{font-size:17px;opacity:.45;}
+        .chart-section .chart-sub{color:var(--text-secondary);font-size:11px;margin:0 0 16px;opacity:.7;}
+        .chart-controls{display:flex;gap:8px;margin-bottom:20px;}
+        .chart-controls button{
+            background:var(--bg-card);border:1px solid rgba(255,255,255,.08);color:var(--text-secondary);
+            padding:7px 18px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:500;font-family:inherit;
+            transition:all .15s;
+        }
+        .chart-controls button:hover{border-color:rgba(255,255,255,.18);color:var(--text-primary);}
+        .chart-controls button.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+        .chart-canvas-wrap{position:relative;height:280px;}
+        .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+        @media(max-width:720px){.charts-grid{grid-template-columns:1fr;}}
+
+        /* ── Uptime ── */
+        .uptime-section{background:var(--bg-card);border-radius:14px;padding:24px;margin-bottom:24px;border:1px solid rgba(255,255,255,.06);}
+        .uptime-section h3{color:var(--text-primary);font-size:16px;margin:0;font-weight:600;}
         .uptime-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
-        .uptime-pct-val{font-size:22px;font-weight:700;}
+        .uptime-pct-val{font-size:24px;font-weight:700;}
         .uptime-dots-detail{display:flex;gap:2px;align-items:flex-end;}
-        .uptime-dots-detail .dot{width:8px;height:28px;border-radius:3px;position:relative;cursor:default;transition:opacity .15s;}
+        .uptime-dots-detail .dot{width:8px;height:30px;border-radius:3px;position:relative;cursor:default;transition:opacity .15s;}
         .uptime-dots-detail .dot:hover{opacity:.8;}
         .uptime-dots-detail .dot.up{background:var(--dot-up);}
         .uptime-dots-detail .dot.down{background:var(--dot-down);}
@@ -54,8 +74,6 @@
         .uptime-dots-detail .dot.grey,.uptime-dots-detail .dot.none{background:var(--dot-grey);}
         .uptime-dots-detail .dot:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
             background:#111517;color:#fff;font-size:11px;padding:4px 8px;border-radius:4px;white-space:nowrap;z-index:10;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.4);}
-        .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-        @media(max-width:720px){.charts-grid{grid-template-columns:1fr;}}
     </style>
 </head>
 <body>
@@ -85,12 +103,32 @@
             <button data-hours="168">7d</button>
         </div>
 
-        <div id="charts-root"></div>
+        <div class="charts-grid">
+            <div class="chart-section">
+                <h3><span class="chart-icon">⚙</span> CPU</h3>
+                <p class="chart-sub">Usage, IOWait &amp; Steal</p>
+                <div class="chart-canvas-wrap"><canvas id="chart-cpu"></canvas></div>
+            </div>
+            <div class="chart-section">
+                <h3><span class="chart-icon">💻</span> RAM</h3>
+                <p class="chart-sub">RAM, Swap, Buffered &amp; Cached</p>
+                <div class="chart-canvas-wrap"><canvas id="chart-ram"></canvas></div>
+            </div>
+            <div class="chart-section">
+                <h3><span class="chart-icon">⇅</span> Network</h3>
+                <p class="chart-sub">Inbound &amp; Outbound traffic</p>
+                <div class="chart-canvas-wrap"><canvas id="chart-network"></canvas></div>
+            </div>
+            <div class="chart-section">
+                <h3><span class="chart-icon">◎</span> Disk</h3>
+                <p class="chart-sub">Disk usage over time</p>
+                <div class="chart-canvas-wrap"><canvas id="chart-disk"></canvas></div>
+            </div>
+        </div>
     </div>
     <script>
     const SERVER_ID = {{ server_id }};
     </script>
     <script src="/static/js/server.js"></script>
-    <script src="/static/js/server-charts.js"></script>
 </body>
 </html>
