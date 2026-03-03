@@ -238,10 +238,22 @@
         };
     }
 
+    function peakOf(...arrays) {
+        let max = 0;
+        for (const arr of arrays) {
+            for (const v of arr) { if (v > max) max = v; }
+        }
+        return Math.ceil(max * 1.1) || 10; // 10% headroom, minimum 10
+    }
+
     function renderCharts(data) {
         const history = data.history;
         if (!history.length) return;
         const labels = makeLabels(history);
+
+        const cpuVals = history.map(h => h.cpu);
+        const ioVals = history.map(h => h.iowait);
+        const stealVals = history.map(h => h.steal);
 
         // CPU Chart
         const ctx1 = document.getElementById('chart-cpu').getContext('2d');
@@ -251,13 +263,18 @@
             data: {
                 labels,
                 datasets: [
-                    ds('CPU', history.map(h => h.cpu), '#7B8DA4', true, ctx1),
-                    ds('IOWait', history.map(h => h.iowait), '#FF9F43', true, ctx1),
-                    ds('Steal', history.map(h => h.steal), '#FF6B6B', true, ctx1),
+                    ds('CPU', cpuVals, '#7B8DA4', true, ctx1),
+                    ds('IOWait', ioVals, '#FF9F43', true, ctx1),
+                    ds('Steal', stealVals, '#FF6B6B', true, ctx1),
                 ],
             },
-            options: chartOpts(100, '%'),
+            options: chartOpts(peakOf(cpuVals, ioVals, stealVals), '%'),
         });
+
+        const ramVals = history.map(h => h.ram);
+        const swapVals = history.map(h => h.swap);
+        const bufVals = history.map(h => h.buffered);
+        const cacVals = history.map(h => h.cached);
 
         // RAM Chart
         const ctx2 = document.getElementById('chart-ram').getContext('2d');
@@ -267,14 +284,16 @@
             data: {
                 labels,
                 datasets: [
-                    ds('RAM', history.map(h => h.ram), '#C9A84C', true, ctx2),
-                    ds('Swap', history.map(h => h.swap), '#B78FFF', true, ctx2),
-                    ds('Buffered', history.map(h => h.buffered), '#5BC0EB', true, ctx2),
-                    ds('Cached', history.map(h => h.cached), '#9BC53D', true, ctx2),
+                    ds('RAM', ramVals, '#C9A84C', true, ctx2),
+                    ds('Swap', swapVals, '#B78FFF', true, ctx2),
+                    ds('Buffered', bufVals, '#5BC0EB', true, ctx2),
+                    ds('Cached', cacVals, '#9BC53D', true, ctx2),
                 ],
             },
-            options: chartOpts(100, '%'),
+            options: chartOpts(peakOf(ramVals, swapVals, bufVals, cacVals), '%'),
         });
+
+        const diskVals = history.map(h => h.disk);
 
         // Disk Chart
         const ctx3 = document.getElementById('chart-disk').getContext('2d');
@@ -284,11 +303,14 @@
             data: {
                 labels,
                 datasets: [
-                    ds('Disk', history.map(h => h.disk), '#E85D75', true, ctx3),
+                    ds('Disk', diskVals, '#E85D75', true, ctx3),
                 ],
             },
-            options: chartOpts(100, '%'),
+            options: chartOpts(peakOf(diskVals), '%'),
         });
+
+        const netInVals = history.map(h => h.net_in);
+        const netOutVals = history.map(h => h.net_out);
 
         // Network Chart
         const ctx4 = document.getElementById('chart-network').getContext('2d');
@@ -298,11 +320,11 @@
             data: {
                 labels,
                 datasets: [
-                    ds('In', history.map(h => h.net_in), '#6BCB77', true, ctx4),
-                    ds('Out', history.map(h => h.net_out), '#4DA8DA', true, ctx4),
+                    ds('In', netInVals, '#6BCB77', true, ctx4),
+                    ds('Out', netOutVals, '#4DA8DA', true, ctx4),
                 ],
             },
-            options: chartOpts(undefined, 'Mbps'),
+            options: chartOpts(peakOf(netInVals, netOutVals), 'Mbps'),
         });
     }
 
