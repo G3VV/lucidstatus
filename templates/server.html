@@ -32,9 +32,9 @@
         .net-bar-row .nb-track{flex:1;height:8px;background:var(--bg-bar);border-radius:4px;overflow:hidden;}
         .net-bar-row .nb-fill{height:100%;border-radius:4px;transition:width .4s;}
         @media(max-width:600px){.detail-stats{grid-template-columns:repeat(2,1fr);} .net-card{flex-direction:column;gap:14px;align-items:stretch;} .net-bar-combined{flex:none;}}
-        .chart-section{background:var(--bg-card);border-radius:10px;padding:22px;margin-bottom:16px;}
-        .chart-section h3{color:var(--text-primary);font-size:15px;margin:0 0 4px;font-weight:600;}
-        .chart-section .chart-sub{color:var(--text-secondary);font-size:12px;margin-bottom:14px;}
+        .chart-section{background:var(--bg-card);border-radius:12px;padding:22px 22px 14px;margin-bottom:16px;border:1px solid rgba(255,255,255,.06);}
+        .chart-section h3{color:var(--text-primary);font-size:15px;margin:0 0 12px;font-weight:600;display:flex;align-items:center;gap:8px;}
+        .chart-section h3 .chart-icon{font-size:16px;opacity:.55;}
         .chart-controls{display:flex;gap:8px;margin-bottom:16px;}
         .chart-controls button{background:var(--bg-bar);border:none;color:var(--text-secondary);padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;font-family:inherit;}
         .chart-controls button.active{background:var(--accent);color:#fff;}
@@ -85,24 +85,20 @@
 
         <div class="charts-grid">
             <div class="chart-section">
-                <h3>CPU</h3>
-                <p class="chart-sub">Usage, IOWait & Steal</p>
+                <h3><span class="chart-icon">⚙</span> CPU</h3>
                 <div class="chart-canvas-wrap"><canvas id="chart-cpu"></canvas></div>
             </div>
             <div class="chart-section">
-                <h3>Memory</h3>
-                <p class="chart-sub">RAM, Swap, Buffered & Cached</p>
+                <h3><span class="chart-icon">💻</span> RAM</h3>
                 <div class="chart-canvas-wrap"><canvas id="chart-ram"></canvas></div>
             </div>
             <div class="chart-section">
-                <h3>Disk</h3>
-                <p class="chart-sub">Disk usage over time</p>
-                <div class="chart-canvas-wrap"><canvas id="chart-disk"></canvas></div>
+                <h3><span class="chart-icon">⇅</span> Network</h3>
+                <div class="chart-canvas-wrap"><canvas id="chart-network"></canvas></div>
             </div>
             <div class="chart-section">
-                <h3>Network</h3>
-                <p class="chart-sub">Inbound & outbound (Mbps)</p>
-                <div class="chart-canvas-wrap"><canvas id="chart-network"></canvas></div>
+                <h3><span class="chart-icon">◎</span> Disk</h3>
+                <div class="chart-canvas-wrap"><canvas id="chart-disk"></canvas></div>
             </div>
         </div>
     </div>
