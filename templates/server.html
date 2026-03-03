@@ -7,7 +7,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/recharts@2/umd/Recharts.js"></script>
+    <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         .detail-wrap{max-width:960px;margin:0 auto;padding:24px 20px;}
         .back-link{color:var(--accent);text-decoration:none;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;}
@@ -83,28 +86,12 @@
             <button data-hours="168">7d</button>
         </div>
 
-        <div class="charts-grid">
-            <div class="chart-section">
-                <h3><span class="chart-icon">⚙</span> CPU</h3>
-                <div class="chart-canvas-wrap"><canvas id="chart-cpu"></canvas></div>
-            </div>
-            <div class="chart-section">
-                <h3><span class="chart-icon">💻</span> RAM</h3>
-                <div class="chart-canvas-wrap"><canvas id="chart-ram"></canvas></div>
-            </div>
-            <div class="chart-section">
-                <h3><span class="chart-icon">⇅</span> Network</h3>
-                <div class="chart-canvas-wrap"><canvas id="chart-network"></canvas></div>
-            </div>
-            <div class="chart-section">
-                <h3><span class="chart-icon">◎</span> Disk</h3>
-                <div class="chart-canvas-wrap"><canvas id="chart-disk"></canvas></div>
-            </div>
-        </div>
+        <div id="charts-root"></div>
     </div>
     <script>
     const SERVER_ID = {{ server_id }};
     </script>
     <script src="/static/js/server.js"></script>
+    <script type="text/babel" src="/static/js/server-charts.js"></script>
 </body>
 </html>
